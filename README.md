@@ -11,7 +11,7 @@ Before opening the solution files, the following files must be added to both pro
 2. The modules use the Magic Music Visuals Module Development Kit (MDK)
     - [Visit the MDK download page](https://magicmusicvisuals.com/developers) and download "Magic MDK v2.2" and save to a convenient folder.
     - Extract the single file "MagicModule.h"
-    - Copy MagicModule.h to the repository root containing either MagicNDIsender.cpp or MagicNDIreceiver.cpp.
+    - Copy MagicModule.h to both project folders containing either MagicNDIsender.cpp or MagicNDIreceiver.cpp.
 3. The projects use files from the Openframeworks addon "ofxNDI" which is separately maintained.
     - [Visit the ofxNDI repository](https://github.com/leadedge/ofxNDI)
     - Click "Clone or Download", "Download ZIP" and save to a convenient folder.
