@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="lib\glee\GLee.c">
+      <Filter>lib\glee</Filter>
+    </ClCompile>
+    <ClCompile Include="MagicNDIreceiver.cpp" />
+    <ClCompile Include="ofxNDI\src\ofxNDIreceive.cpp">
+      <Filter>ofxNDI</Filter>
+    </ClCompile>
+    <ClCompile Include="ofxNDI\src\ofxNDIsend.cpp">
+      <Filter>ofxNDI</Filter>
+    </ClCompile>
+    <ClCompile Include="ofxNDI\src\ofxNDIutils.cpp">
+      <Filter>ofxNDI</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="lib">
+      <UniqueIdentifier>{0637b5f2-fe5e-4647-bb0b-544ccb918bc7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\glee">
+      <UniqueIdentifier>{923e2ba5-713d-4027-9e4b-4bc8b7313d2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ofxNDI">
+      <UniqueIdentifier>{83f66358-9729-4263-9e4d-bed522a7b292}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\glee\GLee.h">
+      <Filter>lib\glee</Filter>
+    </ClInclude>
+    <ClInclude Include="ofxNDI\src\ofxNDIreceive.h">
+      <Filter>ofxNDI</Filter>
+    </ClInclude>
+    <ClInclude Include="ofxNDI\src\ofxNDIsend.h">
+      <Filter>ofxNDI</Filter>
+    </ClInclude>
+    <ClInclude Include="ofxNDI\src\ofxNDIutils.h">
+      <Filter>ofxNDI</Filter>
+    </ClInclude>
+    <ClInclude Include="MagicModule.h" />
+  </ItemGroup>
+</Project>
