@@ -15,12 +15,12 @@ Before opening the solution files, the following files must be added to both pro
 3. The projects use files from the Openframeworks addon "ofxNDI" which is separately maintained.
     - [Visit the ofxNDI repository](https://github.com/leadedge/ofxNDI)
     - Click "Clone or Download", "Download ZIP" and save to a convenient folder.
-    - Unzip the contents and copy the following files to the project "ofxNDI" folder
-        ofxNDI-master\src\ofxNDIreceive.cpp
-        ofxNDI-master\src\ofxNDIreceive.h
-        ofxNDI-master\src\ofxNDIsend.cpp
-        ofxNDI-master\src\ofxNDIsend.h
-        ofxNDI-master\src\ofxNDIutils.cpp
+    - Unzip the contents and copy the following files to the project "ofxNDI" folder\
+        ofxNDI-master\src\ofxNDIreceive.cpp\
+        ofxNDI-master\src\ofxNDIreceive.h\
+        ofxNDI-master\src\ofxNDIsend.cpp\
+        ofxNDI-master\src\ofxNDIsend.h\
+        ofxNDI-master\src\ofxNDIutils.cpp\
         ofxNDI-master\src\ofxNDIutils.h
     - Other files in the addon are not required.
 4. [Register with Newtek](http://pages.newtek.com/NDI-Developers.html) for the NDI SDK. Install the NewTek SDK and copy files as follows.
@@ -30,6 +30,10 @@ Before opening the solution files, the following files must be added to both pro
 5. Copy "ofxNDI/libs/x64/Processing.NDI.Lib.x64.dll" to the folder containing Magic.exe 64bit.
 6. Copy "ofxNDI/libs/x86/Processing.NDI.Lib.x86.dll" to the folder containing Magic.exe 32bit.
 7. Open the project solution files with Visual Studio 2017, change to release and build.
+
+## Binaries
+
+If you want pre-built modules to use straight way, select the "Release" tab and download the release zip file.
 
 ## Copyrights
 
