@@ -1,74 +1,79 @@
-/*
- * Magic Module Development Kit (MDK) v2.11
- * Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
- *
- * The MDK is provided "as is" without any express or implied warranty
- * of any kind, oral or written, including warranties of merchantability,
- * fitness for any particular purpose, non-infringement, information
- * accuracy, integration, interoperability, or quiet enjoyment.  In no
- * event shall Color & Music, LLC or its suppliers be liable for any
- * damages whatsoever (including, without limitation, damages for loss
- * of profits, business interruption, loss of information, or physical
- * damage to hardware or storage media) arising out of the use of, misuse
- * of, or inability to use the MDK, your reliance on any content in the
- * MDK, or from the modification, alteration or complete discontinuance
- * of the MDK, even if Color & Music, LLC has been advised of the
- * possibility of such damages.
- */
+//
+// Magic Module Development Kit (MDK) v2.11
+// Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
+//
+// The MDK is provided "as is" without any express or implied warranty
+// of any kind, oral or written, including warranties of merchantability,
+// fitness for any particular purpose, non-infringement, information
+// accuracy, integration, interoperability, or quiet enjoyment.  In no
+// event shall Color & Music, LLC or its suppliers be liable for any
+// damages whatsoever (including, without limitation, damages for loss
+// of profits, business interruption, loss of information, or physical
+// damage to hardware or storage media) arising out of the use of, misuse
+// of, or inability to use the MDK, your reliance on any content in the
+// MDK, or from the modification, alteration or complete discontinuance
+// of the MDK, even if Color & Music, LLC has been advised of the
+// possibility of such damages.
 
- // =======================================================================================
- //
- //		MagicNDIsender
- //
- //		Module plugin for Magic https://magicmusicvisuals.com/
- //		Using the Magic MDK
- //
- //		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
- //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
- //		Copyright(C) 2018-2019 Lynn Jarvis http://spout.zeal.co/
- //
- // =======================================================================================
- //	This program is free software : you can redistribute it and/or modify
- //	it under the terms of the GNU Lesser General Public License as published by
- //	the Free Software Foundation, either version 3 of the License, or
- //	(at your option) any later version.
- //
- //	This program is distributed in the hope that it will be useful,
- //	but WITHOUT ANY WARRANTY; without even the implied warranty of
- //	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
- //	GNU Lesser General Public License for more details.
- //
- //	You should have received a copy of the GNU Lesser General Public License
- //	along with this program.If not, see <http://www.gnu.org/licenses/>.
- //
- //	Revisions :
- //
- //	11.08.18	- Create constructor for initialization
- //				  Change FindSenders in ofxReceive class to return true for network change
- //				  Change logic of sender discovery to skip the section if no network change
- //				  Change static data for combobox to char array
- //				  Clear texture to black on initialization due to artefacts on first draw
- // 13.08.18	- Simplify with CreateNDIsender, UpdateNDIsender and ReleaseNDIsender functions
- //				  ReleaseSender() (NDIlib_send_destroy) can freeze for quick repeats
- // 16.08.18	- GPU methods for flip image from host fbo
- //				  Fix ofxNDIsender::UpdateSender to include aspect ratio and no clock video for async mode
- //				  Increment version to 1.001
- //	12.10.18	- Specifically set frame rate in CreateSender
- //				- Remove Async mode option due to failure in 3.5
- //				  Increment version to 1.002
- // 13.10.18	- Thread version testing for async mode
- //				  TODO Pause/Resume thread for sender change
- //				  Hack using Sleep - but needs correct procedure
- // 16.10.18	- Update to NDI 3.7 - Async now works clocked
- //				  Remove thread testing 
- //				  Version 1.003
- // 15.11.18	- Rebuild with MAGIC_MDK_VERSION 2.2
- //				  Version 1.004
- // 10.03.19	- Update to NDI Version 3.8
- // 12.03.19	- Cleanup for GitHub
- //				  Version 1.005
- //
- // =======================================================================================
+// =======================================================================================
+//
+//		MagicNDIsender
+//
+//		Module plugin for Magic https://magicmusicvisuals.com/
+//		Using the Magic MDK
+//
+//		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
+//		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
+//		Copyright(C) 2018-2019 Lynn Jarvis http://spout.zeal.co/
+//
+// =======================================================================================
+//	This program is free software : you can redistribute it and/or modify
+//	it under the terms of the GNU Lesser General Public License as published by
+//	the Free Software Foundation, either version 3 of the License, or
+//	(at your option) any later version.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+//	GNU Lesser General Public License for more details.
+//
+//	You should have received a copy of the GNU Lesser General Public License
+//	along with this program.If not, see <http://www.gnu.org/licenses/>.
+//
+//	Revisions :
+//
+//	11.08.18	- Create constructor for initialization
+//				  Change FindSenders in ofxReceive class to return true for network change
+//				  Change logic of sender discovery to skip the section if no network change
+//				  Change static data for combobox to char array
+//				  Clear texture to black on initialization due to artefacts on first draw
+// 13.08.18		- Simplify with CreateNDIsender, UpdateNDIsender and ReleaseNDIsender functions
+//				  ReleaseSender() (NDIlib_send_destroy) can freeze for quick repeats
+// 16.08.18		- GPU methods for flip image from host fbo
+//				  Fix ofxNDIsender::UpdateSender to include aspect ratio and no clock video for async mode
+//				  Increment version to 1.001
+//	12.10.18	- Specifically set frame rate in CreateSender
+//				- Remove Async mode option due to failure in 3.5
+//				  Increment version to 1.002
+// 13.10.18		- Thread version testing for async mode
+//				  TODO Pause/Resume thread for sender change
+//				  Hack using Sleep - but needs correct procedure
+// 16.10.18		- Update to NDI 3.7 - Async now works clocked
+//				  Remove thread testing 
+//				  Version 1.003
+// 15.11.18		- Rebuild with MAGIC_MDK_VERSION 2.2
+//				  Version 1.004
+// 10.03.19		- Update to NDI Version 3.8
+// 12.03.19		- Cleanup for GitHub
+//				  Version 1.005
+// 15.03.19		- Set to clocked video for both normal and async sending modes due to
+//				  problems with Studio Monitor. Changes made to ofxNDIsend.cpp.
+//				  Fps should be set to refresh rate to avoid throttling the application.
+//				  Version 1.006
+// 18.03.19		- Introduced clock video toggle for 60fps / user fps
+//				  Version 1.007
+//
+// =======================================================================================
 
 // necessary for OpenGL
 #ifdef _WIN32
@@ -93,11 +98,12 @@
 // Convenience definitions
 #define PARAM_SenderName 0
 #define PARAM_Buffer     1
-#define PARAM_Fps        2
-#define PARAM_Async      3
+#define PARAM_Clock      2
+#define PARAM_Fps        3
+#define PARAM_Async      4
 
 // Number of parameters
-#define NumParams 4
+#define NumParams 5
 
 #ifndef GL_READ_FRAMEBUFFER_EXT
 #define GL_READ_FRAMEBUFFER_EXT 0x8CA8
@@ -116,7 +122,6 @@ class MagicNDIsenderModule : public MagicModule
 public:
 
 	MagicNDIsenderModule() {
-
 		
 		/*
 		// For debugging
@@ -134,6 +139,7 @@ public:
 		bInitialized = false;
 		bBuffer = true;
 		bAsync = false;
+		bClock = true;
 		spout_buffer = NULL;
 		m_pbo[0] = 0;
 		m_pbo[1] = 0;
@@ -234,7 +240,7 @@ public:
 				else
 					glReadPixels(0, 0, m_Width, m_Height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
 				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, userData->glState->currentFramebuffer);
-				// If not async mode send is clocked at the sender fps
+				// The video frame send is clocked at the sender fps
 				ndisender.SendImage(spout_buffer, m_Width, m_Height, false, false);
 			}
 			
@@ -264,19 +270,36 @@ public:
 			case PARAM_Fps:
 				m_frate_N = (int)(atof(newValue) * 1000.0);
 				m_frate_D = 1000;
-				ndisender.SetFrameRate(m_frate_N, m_frate_D);
-				if(bInitialized)
-					ndisender.UpdateSender(m_Width, m_Height);
+				if(bClock) {
+					ndisender.SetFrameRate(m_frate_N, m_frate_D);
+					if (bInitialized)
+						ndisender.UpdateSender(m_Width, m_Height);
+				}
 				break;
 
 			// Async mode
 			case PARAM_Async:
 				bAsync = (iValue == 1);
 				ndisender.SetAsync(bAsync);
-				// Do not clock video for async sending
-				// Check done in CreateSender
-				ndisender.ReleaseSender(); // no need to reset buffers
-				bInitialized = false; // Re-create the sender
+				break;
+
+			case PARAM_Clock:
+				bClock = (iValue == 1);
+				ndisender.SetClockVideo(bClock);
+				if (!bClock) {
+					// default to 60 fps
+					ndisender.SetFrameRate(60000, 1000);
+				}
+				else {
+					// Restore user fps
+					ndisender.SetFrameRate(m_frate_N, m_frate_D);
+				}
+				if (bInitialized) {
+					ndisender.ReleaseSender(); // no need to reset buffers
+					// Re-create the sender because clock_video is
+					// part of NDI_send_create_desc used to create the sender
+					bInitialized = false;
+				}
 				break;
 
 		}
@@ -285,15 +308,34 @@ public:
 	
 	}
 
+	// paramCurrentlyEnabled() is called when the module needs to determine
+	// what parameters are being used. It can return false if a specific parameter
+	// temporarily needs to be displayed as greyed out in the module GUI.
+	bool paramCurrentlyEnabled(const int whichParam) {
+
+		switch (whichParam) {
+
+			case PARAM_Fps:
+				if (!bClock)
+					return false;
+				break;
+			}
+		
+		return true; 
+	
+	}
+
+
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.005\n"
+		return "Magic NDI Sender - Vers 1.007\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Sends textures to NDI Receivers\n"
 			"Newtek - http://NDI.NewTek.com \n\n"
 			"Sender : sender name\n"
 			"Buffering : use OpenGL pixel buffering\n"
-			"Fps : sender frame rate\n"
-			"Async : asynchronous sending mode";
+			"Clock video : clock video frame rate\n"
+			"Fps : set frame rate\n"
+			"Async : asynchronous sending mode\n";
 	}
 
 protected:
@@ -307,15 +349,15 @@ protected:
 	bool bInitialized;
 	bool bBuffer;
 	bool bAsync;
+	bool bClock;
+	int m_frate_N;
+	int m_frate_D;
 	unsigned char * spout_buffer;
 	GLuint m_pbo[2];
 	int PboIndex;
 	int NextPboIndex;
 	GLuint m_fbo;
 	GLuint m_glTexture;
-
-	int m_frate_N;
-	int m_frate_D;
 
 	
 	bool FlipTexture(unsigned int width, unsigned int height, GLuint HostFBO)
@@ -520,9 +562,9 @@ protected:
 		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
 		PboIndex = NextPboIndex = 0;
 		
-		// Set current modes
-		ndisender.SetFrameRate(m_frate_N, m_frate_D);
+		// Set current modes except frame rate which is set by the user
 		ndisender.SetAsync(bAsync);
+		ndisender.SetClockVideo(bClock);
 
 		// Create a new sender
 		return(ndisender.CreateSender(SenderName, m_Width, m_Height));
@@ -551,6 +593,7 @@ protected:
 
 		// Set current modes
 		ndisender.SetAsync(bAsync);
+		ndisender.SetClockVideo(bClock);
 
 		// Reset pbos because NextPboIndex might still have data in it
 		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
@@ -591,6 +634,7 @@ const MagicModuleSettings MagicNDIsenderModule::settings = MagicModuleSettings(N
 const MagicModuleParam MagicNDIsenderModule::params[NumParams] = {
 	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true),
 	MagicModuleParam("Buffering", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
+	MagicModuleParam("Clock video", "1", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
 	MagicModuleParam("Fps", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true),
 	MagicModuleParam("Async", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true)
 };
