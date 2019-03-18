@@ -2,7 +2,10 @@
 MagicNDIsender and MagicNDIreceiver are module plugins for Magic (https://magicmusicvisuals.com/) to send and receive images over a network using the NewTek Network Device Protocol.
 
 ## Updates
-12.03.19 - Create repository
+12.03.19 - Create repository\
+18.03.19 - MagicNDIsender\
+o Introduced clock video toggle for 60fps / user fps\
+o Version 1.007
 
 ## Setup
 
