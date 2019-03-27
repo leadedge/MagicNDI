@@ -72,6 +72,9 @@
 //				  Version 1.006
 // 18.03.19		- Introduced clock video toggle for 60fps / user fps
 //				  Version 1.007
+// 19.03.19		- Added tooltips
+// 27.03.19		- Update with current ofxNDI source on GitHub
+//				  Version 1.008
 //
 // =======================================================================================
 
@@ -287,11 +290,16 @@ public:
 				bClock = (iValue == 1);
 				ndisender.SetClockVideo(bClock);
 				if (!bClock) {
+					// LJ DEBUG
 					// default to 60 fps
 					ndisender.SetFrameRate(60000, 1000);
+					// Use internal timimg
+					// ofxNDIutils::SetSenderFps(m_frate_N, m_frate_D);
 				}
 				else {
-					// Restore user fps
+					// Disable internal timing
+					// ofxNDIutils::SetSenderFps(0);
+					// Restore user fps for NDI
 					ndisender.SetFrameRate(m_frate_N, m_frate_D);
 				}
 				if (bInitialized) {
@@ -327,14 +335,14 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.007\n"
+		return "Magic NDI Sender - Vers 1.008\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Sends textures to NDI Receivers\n"
 			"Newtek - http://NDI.NewTek.com \n\n"
 			"Sender : sender name\n"
 			"Buffering : use OpenGL pixel buffering\n"
 			"Clock video : clock video frame rate\n"
-			"Fps : set frame rate\n"
+			"Fps : set frame rate for clocked video\n"
 			"Async : asynchronous sending mode\n";
 	}
 
@@ -632,10 +640,9 @@ MagicModule *CreateInstance() {
 const MagicModuleSettings MagicNDIsenderModule::settings = MagicModuleSettings(NumParams);
 
 const MagicModuleParam MagicNDIsenderModule::params[NumParams] = {
-	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true),
-	MagicModuleParam("Buffering", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
-	MagicModuleParam("Clock video", "1", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
-	MagicModuleParam("Fps", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true),
-	MagicModuleParam("Async", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true)
+	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true, "Sender name"),
+	MagicModuleParam("Buffering", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Use OpenGL pixel buffering"),
+	MagicModuleParam("Clock video", "1", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Clock video frame rate"),
+	MagicModuleParam("Fps", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true, "Set frame rate"),
+	MagicModuleParam("Async", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Asynchronous sending mode")
 };
-
