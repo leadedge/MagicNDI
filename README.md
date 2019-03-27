@@ -5,7 +5,11 @@ MagicNDIsender and MagicNDIreceiver are module plugins for Magic (https://magicm
 12.03.19 - Create repository\
 18.03.19 - MagicNDIsender\
 o Introduced clock video toggle for 60fps / user fps\
-o Version 1.007
+o Version 1.007\
+27.03.19 - MagicNDIsender\
+o Added tooltips\
+o Update with current ofxNDI source\
+o Version 1.008
 
 ## Setup
 
