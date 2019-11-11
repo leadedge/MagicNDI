@@ -10,7 +10,7 @@ o Version 1.007\
 o Added tooltips\
 o Update with current ofxNDI source\
 o Version 1.008\
-11.11.19
+11.11.19\
 o Update with ofxNDI for NDI 4.0\
 o Version 1.009
 
