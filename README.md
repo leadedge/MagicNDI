@@ -9,7 +9,7 @@ o Version 1.007\
 27.03.19 - MagicNDIsender\
 o Added tooltips\
 o Update with current ofxNDI source\
-o Version 1.008
+o Version 1.008\n
 o Update with ofxNDI for NDI 4.0\
 o Version 1.009
 
