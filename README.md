@@ -10,6 +10,8 @@ o Version 1.007\
 o Added tooltips\
 o Update with current ofxNDI source\
 o Version 1.008
+o Update with ofxNDI for NDI 4.0\
+o Version 1.009
 
 ## Setup
 
@@ -30,10 +32,10 @@ Before opening the solution files, the following files must be added to both pro
         ofxNDI-master\src\ofxNDIutils.cpp\
         ofxNDI-master\src\ofxNDIutils.h
     - Other files in the addon are not required.
-4. [Register with Newtek](http://pages.newtek.com/NDI-Developers.html) for the NDI SDK. Install the NewTek SDK and copy files as follows.
-    - Copy all the files in "../NewTek NDI 3.8 SDK/Include" to "ofxNDI/include"
-    - Copy the "x86" and "x64" folders in "../NewTek NDI 3.8 SDK/Lib" to "ofxNDI/libs/NDI/Libs"
-    - Copy the "x86" and "x64" folders in "../NewTek NDI 3.8 SDK/Bin" to "ofxNDI/libs"
+4. [Visit Newtek](https://www.ndi.tv/) and download the NDI SDK. Install it and copy files as follows.
+    - Copy all the files in "../NDI 4 SDK/Include" to "ofxNDI/include"
+    - Copy the "x86" and "x64" folders in "../NDI 4 SDK/Lib" to "ofxNDI/libs/NDI/Lib"
+    - Copy the "x86" and "x64" folders in "../NDI 4 SDK/Bin" to "ofxNDI/lib"
 5. Copy "ofxNDI/libs/x64/Processing.NDI.Lib.x64.dll" to the folder containing Magic.exe 64bit.
 6. Copy "ofxNDI/libs/x86/Processing.NDI.Lib.x86.dll" to the folder containing Magic.exe 32bit.
 7. Open the project solution files with Visual Studio 2017, change to release and build.
