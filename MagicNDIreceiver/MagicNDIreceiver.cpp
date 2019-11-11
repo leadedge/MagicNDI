@@ -1,20 +1,19 @@
-/*
- * Magic Module Development Kit (MDK) v2.11
- * Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
- *
- * The MDK is provided "as is" without any express or implied warranty
- * of any kind, oral or written, including warranties of merchantability,
- * fitness for any particular purpose, non-infringement, information
- * accuracy, integration, interoperability, or quiet enjoyment.  In no
- * event shall Color & Music, LLC or its suppliers be liable for any
- * damages whatsoever (including, without limitation, damages for loss
- * of profits, business interruption, loss of information, or physical
- * damage to hardware or storage media) arising out of the use of, misuse
- * of, or inability to use the MDK, your reliance on any content in the
- * MDK, or from the modification, alteration or complete discontinuance
- * of the MDK, even if Color & Music, LLC has been advised of the
- * possibility of such damages.
- */
+//
+// Magic Module Development Kit (MDK) v2.11
+// Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
+//
+// The MDK is provided "as is" without any express or implied warranty
+// of any kind, oral or written, including warranties of merchantability,
+// fitness for any particular purpose, non-infringement, information
+// accuracy, integration, interoperability, or quiet enjoyment.  In no
+// event shall Color & Music, LLC or its suppliers be liable for any
+// damages whatsoever (including, without limitation, damages for loss
+// of profits, business interruption, loss of information, or physical
+// damage to hardware or storage media) arising out of the use of, misuse
+// of, or inability to use the MDK, your reliance on any content in the
+// MDK, or from the modification, alteration or complete discontinuance
+// of the MDK, even if Color & Music, LLC has been advised of the
+// possibility of such damages.
 
 // =======================================================================================
 //
@@ -23,8 +22,8 @@
 //		Module plugin for Magic https://magicmusicvisuals.com/
 //		Using the Magic MDK
 //
-//		Using the NDI SDK to receive frames from the network http://NDI.Newtek.com/
-//		And receive class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
+//		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
+//		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
 //		Copyright(C) 2018-2019 Lynn Jarvis http://spout.zeal.co/
 //
 // =======================================================================================
@@ -43,14 +42,14 @@
 //
 //	Revisions :
 //
-//	11.08.18	- Create constructor for initialization
+// 11.08.18		- Create constructor for initialization
 //				  Change FindSenders in ofxReceive class to return true for network change
 //				  Change logic of sender discovery to skip the section if no network change
 //				  Change static data for combobox to char array
 //				  Clear texture to black on initialization due to artefacts on first draw
-//	13.10.18	- Fix aspect adjustment
+// 13.10.18		- Fix aspect adjustment
 //				  Version 1.002 - initial release
-//	16.10.18	- Update to NDI Version 3.7
+// 16.10.18		- Update to NDI Version 3.7
 //				  Remove buffer option - slower than without
 //				  Version 1.003
 // 15.11.18		- Rebuild with MAGIC_MDK_VERSION 2.2
@@ -61,9 +60,15 @@
 // 10.03.19		- Update to NDI Version 3.8
 // 12.03.19		- Cleanup for GitHub
 //				  Version 1.006
+// 15.03.19		- Remove LoadTexturePixels
+//				  Retained by error during cleanup for GitHub
+//				  Previously confirmed that it is slower than glTexSubImage2D
+//				  Version 1.007
+// 28.04.19		- Rebuild x86 and x64 VS2017 /MT
+// 11.11.19		- Update to ofxNDI for NDI 4.0
+//				  Version 1.008
 //
 // =======================================================================================
-
 
 // necessary for OpenGL
 #ifdef _WIN32
@@ -73,18 +78,20 @@
 #pragma comment(lib, "OpenGL32.Lib")
 #else // (assumes OS X)
 #include <OpenGL/gl.h>
-// TODO : Glee? extensions ?
+// TODO : extensions ?
 #endif
 
 #include <conio.h>
 #include <stdio.h>
+#include <thread>
+#include <mutex>
 
 #include "MagicModule.h"
-#include "ofxNDIreceive.h" // TODO - test for OSX - should be compatible
+#include "ofxNDIreceive.h" // TODO - OSX - should be compatible
 
 // Name list for the combo box
 static std::string senderList = ""; // Name list to compare for changes
-static char senderCharList[2560]; // 10 or more sender names
+static char senderCharList[5120]; // 2560 = 10 or more sender names at 256 each
 static bool bNeedsUpdating = false; // Update the combo box
 
 // Convenience definitions
@@ -93,18 +100,25 @@ static bool bNeedsUpdating = false; // Update the combo box
 #define PARAM_Lowres      2
 
 // Number of parameters
-#define ColorRGB_NumParams 3
+#define NumParams 3
+
+#ifndef GL_READ_FRAMEBUFFER_EXT
+#define GL_READ_FRAMEBUFFER_EXT 0x8CA8
+#endif
+
+#ifndef GL_DRAW_FRAMEBUFFER_EXT
+#define GL_DRAW_FRAMEBUFFER_EXT 0x8CA9
+#endif
 
 class MagicNDIreceiverModule : public MagicModule
 {
 	// see below (after class definition) for static value assignments
 	static const MagicModuleSettings settings;
-	static const MagicModuleParam params[ColorRGB_NumParams];
+	static const MagicModuleParam params[NumParams];
 
 public:
-	
-	MagicNDIreceiverModule() {
 
+	MagicNDIreceiverModule() {
 		
 		/*
 		// For debugging
@@ -132,13 +146,17 @@ public:
 
 	}
 
+	~MagicNDIreceiverModule() {
 
+	}
+
+	// getSettings() and getParams() are called whenever
+	// a new instance of the module is created.
 	const MagicModuleSettings *getSettings() {
 		return &settings;
 	}
 
 	const MagicModuleParam *getParams() { 
-
 		return params; 
 	}
 	
@@ -161,10 +179,6 @@ public:
 
 	void drawBefore(MagicUserData *userData) {
 
-		// Removed 09-03-19
-		// if (userData->glState->currentFramebuffer == 0)
-			// return;
-
 		unsigned int width = 0;
 		unsigned int height = 0;
 		int nSenders = 0;
@@ -185,7 +199,7 @@ public:
 					// Can optionally use full NDI name for the list
 					// but the prefix is always the same and exceeds
 					// the combo box name width
-					// list += name; 
+					// list += name;
 
 					// Work out the display names for the combo box
 					std::string newname = name.substr(name.find_first_of("(") + 1, name.find_last_of(")"));
@@ -213,6 +227,7 @@ public:
 			if (list != senderList) {
 				senderList = list; // update comparison string
 				// Update char array for Module param[0].extrainfo
+				// Assume max 256 characters each for 10 senders
 				memset((void *)senderCharList, 0, 2560);
 				if (!list.empty()) strcpy_s(senderCharList, 2560, list.c_str());
 				bNeedsUpdating = true;
@@ -240,29 +255,17 @@ public:
 					InitTexture(senderWidth, senderHeight);
 					return; // no more for this cycle
 				}
-
-				// Update the texture with the pixel buffer
-				LoadTexturePixels(myTexture, GL_TEXTURE_2D, senderWidth, senderHeight, spout_buffer);
-
+				// Now the receiving texture is the right size
+				// Update with the pixel buffer
+				glBindTexture(GL_TEXTURE_2D, myTexture);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+				glBindTexture(GL_TEXTURE_2D, 0);
 			}
-			else {
-				// Check for Metadata or Audio here
-				if (receiver.IsMetadata()) {
-					// printf("Metadata\n");
-					// Can get Metatdata string here
-					// std::string GetMetadataString();
-				}
-				else if (receiver.IsAudioFrame()) {
-					// printf("Audio data\n");
-					// Can get the current audio frame data and specifics here
-					// void ofxNDIreceive::GetAudioData(float *&output, int &samplerate, int &samples, int &nChannels)
-				}
-			}
-
-			// If receiveimage fails to receive video
-			// the connection could be down so keep waiting for it to come back
+			// Can check for Metadata or Audio here on receive fail
+			// Otherwise if receiveimage fails, the connection could
+			// be down so keep waiting for it to come back
 			if (senderWidth > 0 && senderHeight > 0 && myTexture > 0) {
-				DrawReceivedTexture(myTexture, GL_TEXTURE_2D, 
+				DrawReceivedTexture(myTexture, GL_TEXTURE_2D,
 					senderWidth, senderHeight,
 					userData->glState->viewportWidth,
 					userData->glState->viewportHeight);
@@ -279,12 +282,12 @@ public:
 			}
 		}
 
+
 	};
 
 	void drawAfter(MagicUserData *userData) {
 
 	}
-
 
 	bool fixedParamValueChanged(const int whichParam, const char* newValue) {
 		
@@ -297,71 +300,72 @@ public:
 
 		switch (whichParam) {
 
-			// Sender name combo box
-			case PARAM_SenderName:
+		// Sender name combo box
+		case PARAM_SenderName:
 
-				// Is there anything in the combo box at startup?
-				// There might not be any senders running yet.
-				if (newValue && newValue[0] && !bStarted) {
-					startName = newValue; // set the starting name
-				}
+			// Is there anything in the combo box at startup?
+			// There might not be any senders running yet.
+			if (newValue && newValue[0] && !bStarted) {
+				startName = newValue; // set the starting name
+			}
 
-				// Find the index of the selected name in the NDI names list
-				nSenders = receiver.GetSenderCount();
-				if(nSenders > 0) {
-					for (int i = 0; i < nSenders; i++) {
-						name = receiver.GetSenderName(i);
-						if (name.find(newValue, 0, strlen(newValue)) != std::string::npos) {
-							// For a different name, reset to the selected index and start again
-							if (name != senderName) {
-								senderIndex = i;
-								// Reset the sender name (full NDI name)
-								senderName = name;
-								receiver.ReleaseReceiver();
-								bInitialized = false;
-							}
+			// Find the index of the selected name in the NDI names list
+			nSenders = receiver.GetSenderCount();
+			if (nSenders > 0) {
+				for (int i = 0; i < nSenders; i++) {
+					name = receiver.GetSenderName(i);
+					if (name.find(newValue, 0, strlen(newValue)) != std::string::npos) {
+						// For a different name, reset to the selected index and start again
+						if (name != senderName) {
+							senderIndex = i;
+							// Reset the sender name (full NDI name)
+							senderName = name;
+							receiver.ReleaseReceiver();
+							bInitialized = false;
 						}
 					}
 				}
-				break;
+			}
+			break;
 
 			// Aspect preserve
-			case PARAM_Aspect:
-				bAspect = (iValue == 1);
-				break;
+		case PARAM_Aspect:
+			bAspect = (iValue == 1);
+			break;
 
 			// Low bandwidth
-			case PARAM_Lowres:
-				if (iValue != (int)bLowres) {
-					bLowres = (iValue == 1);
-					receiver.SetLowBandwidth(bLowres);
-					receiver.ReleaseReceiver();
-					bInitialized = false;
-				}
-				break;
+		case PARAM_Lowres:
+			if (iValue != (int)bLowres) {
+				bLowres = (iValue == 1);
+				receiver.SetLowBandwidth(bLowres);
+				receiver.ReleaseReceiver();
+				bInitialized = false;
+			}
+			break;
 		}
 
 		return true;
 	
 	}
 
-	bool paramNeedsUpdating(const int whichParam) { 
+	bool paramNeedsUpdating(const int whichParam) {
 
 		if (whichParam == 0 && bNeedsUpdating) {
 			// params[0].extraInfo is reset with the new list array
 			bNeedsUpdating = false;
 			return true;
 		}
-		
-		return false; 
-	
+
+		return false;
+
 	}
 
+
 	const char *getHelpText() {
-		return "Magic NDI Receiver - Vers 1.006\n"
+		return "Magic NDI Receiver - Vers 1.008\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Receives textures from NDI Senders\n"
-			"Newtek http://NDI.NewTek.com\n\n"
+			"Newtek - https://www.ndi.tv/ \n\n"
 			"Sender name : select sender\n"
 			"Aspect : preserve sender aspect ratio\n"
 			"Low bandwidth : low resolution receiving mode";
@@ -418,7 +422,7 @@ protected:
 
 	}
 
-	void DrawReceivedTexture(GLuint TextureID, GLuint TextureTarget, 
+	void DrawReceivedTexture(GLuint TextureID, GLuint TextureTarget,
 		unsigned int width, unsigned int height, int viewportWidth, int viewportHeight)
 	{
 
@@ -476,68 +480,21 @@ protected:
 		glDisable(TextureTarget);
 		glPopMatrix();
 	}
-
-
-	//
-	// Streaming Texture Upload
-	//
-	// From : http://www.songho.ca/opengl/gl_pbo.html
-	//
-	bool LoadTexturePixels(GLuint TextureID, GLuint TextureTarget, unsigned int width, unsigned int height, unsigned char *data)
-	{
-		void *pboMemory = NULL;
-
-		PboIndex = (PboIndex + 1) % 2;
-		NextPboIndex = (PboIndex + 1) % 2;
-
-		// Bind the texture and PBO
-		glBindTexture(TextureTarget, TextureID);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo[PboIndex]);
-
-		// Copy pixels from PBO to the texture - use offset instead of pointer.
-		glTexSubImage2D(TextureTarget, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-		// Bind PBO to update the texture
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo[NextPboIndex]);
-
-		// Call glBufferData() with a NULL pointer to clear the PBO data and avoid a stall.
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, width*height * 4, 0, GL_STREAM_DRAW);
-
-		// Map the buffer object into client's memory
-		pboMemory = (void *)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		if (pboMemory) {
-			// Update data directly on the mapped buffer
-			CopyMemory(pboMemory, (void *)data, width*height * 4);
-			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-		}
-		else {
-			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-			return false;
-		}
-
-		// Release PBOs
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-		return true;
-
-	}
-
 };
 
-MagicModule *CreateInstance() {
-	
-	return new MagicNDIreceiverModule();
 
+MagicModule *CreateInstance() {
+	return new MagicNDIreceiverModule();
 }
 
-const bool HasInputPin() { return false; } // No inputs for a receiver
+const bool HasInputPin() {
+	return false;
+} // No inputs for a receiver
 
-const MagicModuleSettings MagicNDIreceiverModule::settings = MagicModuleSettings(ColorRGB_NumParams);
+const MagicModuleSettings MagicNDIreceiverModule::settings = MagicModuleSettings(NumParams);
 
-const MagicModuleParam MagicNDIreceiverModule::params[ColorRGB_NumParams] = {
+const MagicModuleParam MagicNDIreceiverModule::params[NumParams] = {
 	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_COMBOBOX, true, NULL, senderCharList),
 	MagicModuleParam("Aspect", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
 	MagicModuleParam("Low bandwidth", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true)
 };
-
-

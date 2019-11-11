@@ -52,7 +52,7 @@
 // 16.08.18		- GPU methods for flip image from host fbo
 //				  Fix ofxNDIsender::UpdateSender to include aspect ratio and no clock video for async mode
 //				  Increment version to 1.001
-//	12.10.18	- Specifically set frame rate in CreateSender
+// 12.10.18		- Specifically set frame rate in CreateSender
 //				- Remove Async mode option due to failure in 3.5
 //				  Increment version to 1.002
 // 13.10.18		- Thread version testing for async mode
@@ -75,6 +75,8 @@
 // 19.03.19		- Added tooltips
 // 27.03.19		- Update with current ofxNDI source on GitHub
 //				  Version 1.008
+// 11.11.19		- Update to ofxNDI for NDI 4.0
+//				  Version 1.009
 //
 // =======================================================================================
 
@@ -335,10 +337,10 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.008\n"
+		return "Magic NDI Sender - Vers 1.009\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Sends textures to NDI Receivers\n"
-			"Newtek - http://NDI.NewTek.com \n\n"
+			"Newtek - https://www.ndi.tv/ \n\n"
 			"Sender : sender name\n"
 			"Buffering : use OpenGL pixel buffering\n"
 			"Clock video : clock video frame rate\n"
@@ -632,6 +634,7 @@ protected:
 
 
 };
+
 
 MagicModule *CreateInstance() {
 	return new MagicNDIsenderModule();
