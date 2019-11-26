@@ -77,6 +77,8 @@
 //				  Version 1.008
 // 11.11.19		- Update to ofxNDI for NDI 4.0
 //				  Version 1.009
+// 11.11.19		- Update to ofxNDI for dynamic load of NDI dll
+//				  Version 1.010
 //
 // =======================================================================================
 
@@ -337,7 +339,7 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.009\n"
+		return "Magic NDI Sender - Vers 1.010\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Sends textures to NDI Receivers\n"
 			"Newtek - https://www.ndi.tv/ \n\n"

@@ -67,6 +67,11 @@
 // 28.04.19		- Rebuild x86 and x64 VS2017 /MT
 // 11.11.19		- Update to ofxNDI for NDI 4.0
 //				  Version 1.008
+// 15.11.19		- Update to ofxNDI with dynamic loading
+//				- Bump version number to match with sender
+//				  Version 1.010
+// 19.11.19		- Disable audio receive
+//				  Version 1.011
 //
 // =======================================================================================
 
@@ -141,8 +146,9 @@ public:
 		bAspect = false; // do not preserve aspect ratio of received texture in draw
 		bLowres = false; // do not use low bandwidth receiving mode
 
-		p_AudioData = NULL;
+		p_AudioData = NULL; // Experimental - not used
 		m_AudioDataSize = 0;
+		receiver.SetAudio(false); // Set to receive no audio
 
 	}
 
@@ -165,6 +171,12 @@ public:
 		// Set up for pbo pixel data transfer
 		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
 		glGenBuffers(2, m_pbo);
+
+		// Make sure there is a valid texture to draw
+		// It can be any size to start with
+		senderWidth = 640;
+		senderHeight = 360;
+		InitTexture(640, 360);
 
 	};
 	
@@ -362,7 +374,7 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Receiver - Vers 1.008\n"
+		return "Magic NDI Receiver - Vers 1.011\n"
 			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
 			"Receives textures from NDI Senders\n"
 			"Newtek - https://www.ndi.tv/ \n\n"
