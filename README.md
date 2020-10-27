@@ -13,13 +13,16 @@ o Version 1.008\
 11.11.19\
 o Update with ofxNDI for NDI 4.0\
 o Version 1.009
+27.10.20\
+o Update for Magic MDK 2.3 and NDI 4.5\
+o Version 1.012
 
 ## Setup
 
 1. MagicNDIsender and MagicNDIreceiver project files are for Visual Studio 2017 for Windows.
 Before opening the solution files, the following files must be added to both projects.
 2. The modules use the Magic Music Visuals Module Development Kit (MDK)
-    - [Visit the MDK download page](https://magicmusicvisuals.com/developers) and download "Magic MDK v2.2" and save to a convenient folder.
+    - [Visit the MDK download page](https://magicmusicvisuals.com/developers) and download "Magic MDK v2.3" and save to a convenient folder.
     - Extract the single file "MagicModule.h"
     - Copy MagicModule.h to both project folders containing either MagicNDIsender.cpp or MagicNDIreceiver.cpp.
 3. The projects use files from the Openframeworks addon "ofxNDI" which is separately maintained.
@@ -33,7 +36,7 @@ Before opening the solution files, the following files must be added to both pro
         ofxNDI-master\src\ofxNDIutils.cpp\
         ofxNDI-master\src\ofxNDIutils.h
     - Other files in the addon are not required.
-4. [Visit Newtek](https://www.ndi.tv/) and download the NDI SDK. Install it and copy files as follows.
+4. [Visit Newtek](https://www.ndi.tv/sdk/) and download the NDI SDK. Install it and copy files as follows.
     - Copy all the files in "../NDI 4 SDK/Include" to "ofxNDI/include"
     - Copy the "x86" and "x64" folders in "../NDI 4 SDK/Lib" to "ofxNDI/libs/NDI/Lib"
     - Copy the "x86" and "x64" folders in "../NDI 4 SDK/Bin" to "ofxNDI/lib"
@@ -47,16 +50,16 @@ If you want pre-built modules to use straight way, select the "Release" tab and 
 
 ## Copyrights
 
-MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2019 Lynn Jarvis [http://spout.zeal.co/]
+MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2020 Lynn Jarvis [https://spout.zeal.co/]
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser  General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details. 
 You should have received a copy of the GNU Lesser General Public License along with this program.  If not, see [http://www.gnu.org/licenses/](http://www.gnu.org/licenses).
 
 ----------------------
-Magic Module Development Kit (MDK) v2.11
+Magic Module Development Kit (MDK) v2.3
 
-Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
+Copyright (c) 2012-2020 Color & Music, LLC.  All rights reserved.
 The MDK is provided "as is" without any express or implied warranty
 of any kind, oral or written, including warranties of merchantability,
 fitness for any particular purpose, non-infringement, information
@@ -98,7 +101,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Web: http://elf-stone.com/glee.php
 
 ----------------------
-NDI SDK - Copyright NewTek Inc. [http://NDI.NewTek.com](http://NDI.NewTek.com).
+NDI SDK - Copyright NewTek Inc. [https://www.ndi.tv/](https://www.ndi.tv/).
 
 A license agreement is included with the Newtek SDK when you receive it after registration with NewTek.
 The SDK is used by you in accordance with the license you accepted by clicking “I accept” during installation. This license is available for review from the root of the SDK folder.

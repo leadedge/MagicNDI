@@ -1,6 +1,6 @@
 //
-// Magic Module Development Kit (MDK) v2.11
-// Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
+// Magic Module Development Kit (MDK) v2.3
+// Copyright (c) 2012-2020 Color & Music, LLC.  All rights reserved.
 //
 // The MDK is provided "as is" without any express or implied warranty
 // of any kind, oral or written, including warranties of merchantability,
@@ -78,7 +78,11 @@
 // 11.11.19		- Update to ofxNDI for NDI 4.0
 //				  Version 1.009
 // 11.11.19		- Update to ofxNDI for dynamic load of NDI dll
+// 08.05.20		- Update local ofxNDI folder for NDI 4.5
 //				  Version 1.010
+// 27.10.20		- Update to Magic MDK Version 2.3
+//				  No code changes. NDI remains at Version 4.5
+//				  Version 1.011
 //
 // =======================================================================================
 
@@ -339,8 +343,10 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.010\n"
-			"Lynn Jarvis 2018-2019 - http://spout.zeal.co/ \n\n"
+		return "Magic NDI Sender - Vers 1.011\n"
+			"Lynn Jarvis 2018-2020 - https://spout.zeal.co/ \n"
+			"For Magic MDK Version 2.3\n"
+			"Copyright (c) 2012-2020 Color & Music, LLC.\n\n"
 			"Sends textures to NDI Receivers\n"
 			"Newtek - https://www.ndi.tv/ \n\n"
 			"Sender : sender name\n"
