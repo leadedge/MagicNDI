@@ -12,7 +12,7 @@ o Update with current ofxNDI source\
 o Version 1.008\
 11.11.19\
 o Update with ofxNDI for NDI 4.0\
-o Version 1.009
+o Version 1.009\
 27.10.20\
 o Update for Magic MDK 2.3 and NDI 4.5\
 o Version 1.012
