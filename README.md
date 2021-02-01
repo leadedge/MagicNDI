@@ -16,6 +16,8 @@ o Version 1.009\
 27.10.20\
 o Update for Magic MDK 2.3 and NDI 4.5\
 o Version 1.012
+01.02.21\
+o Update Receiver to Version 1.013 for scene change
 
 ## Setup
 
