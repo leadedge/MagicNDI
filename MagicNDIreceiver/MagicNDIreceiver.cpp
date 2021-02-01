@@ -1,6 +1,6 @@
 //
-// Magic Module Development Kit (MDK) v2.3
-// Copyright (c) 2012-2020 Color & Music, LLC.  All rights reserved.
+// Magic Module Development Kit (MDK) v2.11
+// Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
 //
 // The MDK is provided "as is" without any express or implied warranty
 // of any kind, oral or written, including warranties of merchantability,
@@ -22,9 +22,9 @@
 //		Module plugin for Magic https://magicmusicvisuals.com/
 //		Using the Magic MDK
 //
-//		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
+//		Using the NDI SDK to send frames over a network https://www.ndi.tv/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2020 Lynn Jarvis http://spout.zeal.co/
+//		Copyright(C) 2018-2021 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -76,6 +76,8 @@
 // 27.10.20		- Update to Magic MDK Version 2.3
 //				  No code changes. NDI remains at Version 4.5
 //				  Version 1.012
+// 29.01.21		- Changes for multiple scenes and context refresh
+//				  Version 1.013
 //
 // =======================================================================================
 
@@ -129,6 +131,7 @@ public:
 
 	MagicNDIreceiverModule() {
 		
+		
 		/*
 		// For debugging
 		// Console window so printf works
@@ -138,7 +141,7 @@ public:
 		printf("MagicNDIreceiverModule\n");
 		*/
 
-		spout_buffer = NULL;
+		spout_buffer = nullptr;
 		senderName = "";
 		startName = "";
 		senderIndex = -1;
@@ -146,12 +149,11 @@ public:
 		senderHeight = 0;
 
 		bInitialized = false; // not initialized yet
-		bStarted = false; // Not started yet
+		bStarted = false; // not started yet
+		bNewContext = false; // no OpenGL context yet
 		bAspect = false; // do not preserve aspect ratio of received texture in draw
 		bLowres = false; // do not use low bandwidth receiving mode
 
-		p_AudioData = NULL; // Experimental - not used
-		m_AudioDataSize = 0;
 		receiver.SetAudio(false); // Set to receive no audio
 
 	}
@@ -172,24 +174,24 @@ public:
 	
 	virtual void glInit(MagicUserData *userData) {
 
-		// Set up for pbo pixel data transfer
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
-		glGenBuffers(2, m_pbo);
+		bNewContext = true; // New OpenGL context
 
-		// Make sure there is a valid texture to draw
-		// It can be any size to start with
-		senderWidth = 640;
-		senderHeight = 360;
-		InitTexture(640, 360);
+		// Make sure there is a valid texture to draw in case of scene change.
+		if (senderWidth > 0 && senderHeight > 0)
+			InitTexture(senderWidth, senderHeight);
 
 	};
 	
 	virtual void glClose() {
 
-		receiver.ReleaseReceiver();
+		// Release all objects
 		if (myTexture != 0) glDeleteTextures(1, &myTexture);
 		if (spout_buffer) free((void *)spout_buffer);
 		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
+		myTexture = 0;
+		spout_buffer = nullptr;
+		m_pbo[0] = 0;
+		m_pbo[1] = 0;
 
 	};
 
@@ -199,9 +201,9 @@ public:
 		unsigned int height = 0;
 		int nSenders = 0;
 
-		if (receiver.FindSenders(nSenders)) {
+		if (receiver.FindSenders(nSenders) || bNewContext) {
 
-			// Returns true for a network change
+			// FindSenders returns true for a network change
 			// Even if the last sender closed and nSenders = 0
 
 			// Update the sender name list
@@ -240,64 +242,65 @@ public:
 			} // endif nSenders > 0
 
 			// Tell Magic to update the combo box if the list is different
-			if (list != senderList) {
+			// or if a new OpenGL context in case there has been a scene change.
+			if (list != senderList || bNewContext) {
 				senderList = list; // update comparison string
 				// Update char array for Module param[0].extrainfo
 				// Assume max 256 characters each for 10 senders
 				memset((void *)senderCharList, 0, 2560);
 				if (!list.empty()) strcpy_s(senderCharList, 2560, list.c_str());
 				bNeedsUpdating = true;
-				return;
 			}
 
 		} // endif network change
 
-		if (nSenders == 0)
-			return; // Wait for a sender before drawing anything
-
-		if (bInitialized) {
-			// Receive from the NDI sender
-			// Frame rate might be much less than the draw cycle
-			if (receiver.ReceiveImage(spout_buffer, width, height)) {
-				// Have the NDI sender dimensions changed ?
-				// (initially senderWidth and senderHeight are 0 so the buffer gets created here)
-				if (senderWidth != width || senderHeight != height) {
-					senderWidth = width;
-					senderHeight = height;
-					// Update the receiving buffer
-					if (spout_buffer) free((void *)spout_buffer);
-					spout_buffer = (unsigned char *)malloc(senderWidth*senderHeight * 4 * sizeof(unsigned char));
-					// Update the local texture
-					InitTexture(senderWidth, senderHeight);
-					return; // no more for this cycle
+		if (nSenders > 0) {
+			// Wait for a sender before doing anything
+			if (bInitialized) {
+				// Receive from the NDI sender
+				// Frame rate might be much less than the draw cycle
+				if (receiver.ReceiveImage(spout_buffer, width, height)) {
+					// Have the NDI sender dimensions changed ?
+					// (initially senderWidth and senderHeight are 0 so the buffer gets created here)
+					if (senderWidth != width || senderHeight != height) {
+						senderWidth = width;
+						senderHeight = height;
+						// Update the local texture and receiving buffer
+						InitTexture(senderWidth, senderHeight);
+						return; // no more for this cycle
+					}
+					// Now the receiving texture is the right size
+					// Update with the pixel buffer
+					glBindTexture(GL_TEXTURE_2D, myTexture);
+					// TODO : Check RGBA/BGRA for NDI 4.5
+					// glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+					glBindTexture(GL_TEXTURE_2D, 0);
 				}
-				// Now the receiving texture is the right size
-				// Update with the pixel buffer
-				glBindTexture(GL_TEXTURE_2D, myTexture);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
-				glBindTexture(GL_TEXTURE_2D, 0);
-			}
-			// Can check for Metadata or Audio here on receive fail
-			// Otherwise if receiveimage fails, the connection could
-			// be down so keep waiting for it to come back
-			if (senderWidth > 0 && senderHeight > 0 && myTexture > 0) {
-				DrawReceivedTexture(myTexture, GL_TEXTURE_2D,
-					senderWidth, senderHeight,
-					userData->glState->viewportWidth,
-					userData->glState->viewportHeight);
-			}
 
-		}
-		else {
-			// Create a new receiver for this index if we have a name for it
-			if (!senderName.empty()) {
-				if (receiver.CreateReceiver(senderIndex)) {
-					// senderName is already set by start or combo box selection
-					bInitialized = true;
+				// Can check for Metadata or Audio here on receive fail
+				// Otherwise if receiveimage fails, the connection could
+				// be down so keep waiting for it to come back
+				if (senderWidth > 0 && senderHeight > 0 && myTexture > 0) {
+					DrawReceivedTexture(myTexture, GL_TEXTURE_2D,
+						senderWidth, senderHeight,
+						userData->glState->viewportWidth,
+						userData->glState->viewportHeight);
+				}
+
+			}
+			else {
+				// Create a new receiver for this index if we have a name for it
+				if (!senderName.empty()) {
+					if (receiver.CreateReceiver(senderIndex)) {
+						// senderName is already set by start or combo box selection
+						bInitialized = true;
+					}
 				}
 			}
 		}
 
+		bNewContext = false; // Context has been used
 
 	};
 
@@ -378,10 +381,8 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Receiver - Vers 1.012\n"
-			"Lynn Jarvis 2018-2020 - https://spout.zeal.co/ \n"
-			"For Magic MDK Version 2.3\n"
-			"Copyright (c) 2012-2020 Color & Music, LLC.\n\n"
+		return "Magic NDI Receiver - Vers 1.013\n"
+			"Lynn Jarvis 2018-2021 - https://spout.zeal.co/ \n\n"
 			"Receives textures from NDI Senders\n"
 			"Newtek - https://www.ndi.tv/ \n\n"
 			"Sender name : select sender\n"
@@ -403,29 +404,35 @@ protected:
 	GLuint m_pbo[2];
 	int PboIndex;
 	int NextPboIndex;
-
 	GLuint myTexture;
-	bool bInitialized;
-	bool bStarted;
+
+	bool bInitialized; // NDI is initialized
+	bool bStarted; // module has started
+	bool bNewContext; // glInit has been called
 	bool bAspect; // preserve aspect ratio of received texture in draw
 	bool bLowres; // low bandwidth receiving mode
-
-	float * p_AudioData;
-	size_t m_AudioDataSize;
 
 	// Initialize a local texture
 	void InitTexture(unsigned int width, unsigned int height)
 	{
-		if (myTexture != 0) {
-			glDeleteTextures(1, &myTexture);
-			myTexture = 0;
-		}
+		// Set up for pbo pixel data transfer
+		if (m_pbo[0])
+			glDeleteBuffers(2, m_pbo);
+		glGenBuffers(2, m_pbo);
 
-		// To prevent artefacts when the texture is first drawn,
-		// initialise it with zero chars.
+		// Update the receiving buffer
+		if (spout_buffer)
+			free((void *)spout_buffer);
+		spout_buffer = (unsigned char *)malloc(senderWidth*senderHeight * 4 * sizeof(unsigned char));
+
+		// To prevent artefacts when the texture is first drawn, clear with zero chars.
 		// Noticeable with low frame rate sources such as NDI "Test Pattern"
-		unsigned char * pData = new unsigned char[width * height * 4 * sizeof(unsigned char)];
-		memset(pData, 00, width * height * 4 * sizeof(unsigned char));
+		// Can use the receiving buffer here for this.
+		memset(spout_buffer, 0, width * height * 4 * sizeof(unsigned char));
+
+		// Release any existing texture
+		if (myTexture != 0)
+			glDeleteTextures(1, &myTexture);
 
 		glGenTextures(1, &myTexture);
 		glBindTexture(GL_TEXTURE_2D, myTexture);
@@ -433,10 +440,8 @@ protected:
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, spout_buffer);
 		glBindTexture(GL_TEXTURE_2D, 0);
-
-		free((void *)pData);
 
 	}
 
