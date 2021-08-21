@@ -1,6 +1,6 @@
 //
-// Magic Module Development Kit (MDK) v2.11
-// Copyright (c) 2012-2017 Color & Music, LLC.  All rights reserved.
+// Magic Module Development Kit (MDK) v2.13
+// Copyright (c) 2012-2020 Color & Music, LLC.  All rights reserved.
 //
 // The MDK is provided "as is" without any express or implied warranty
 // of any kind, oral or written, including warranties of merchantability,
@@ -78,6 +78,14 @@
 //				  Version 1.012
 // 29.01.21		- Changes for multiple scenes and context refresh
 //				  Version 1.013
+// 02.02.21		- Change back to RGBA due to NDI conversion problem
+//				  Update GitHub release
+//				  Version 1.014
+// 21.08.22		- Update help text with NDI version number
+//				  Release NDI receiver in destructor
+//				  Update ofxNDI with NDI Version 5
+//				  Rebuild x64 VS2017 / MT
+//				  Version 1.015
 //
 // =======================================================================================
 
@@ -131,7 +139,6 @@ public:
 
 	MagicNDIreceiverModule() {
 		
-		
 		/*
 		// For debugging
 		// Console window so printf works
@@ -159,7 +166,7 @@ public:
 	}
 
 	~MagicNDIreceiverModule() {
-
+		receiver.ReleaseReceiver();
 	}
 
 	// getSettings() and getParams() are called whenever
@@ -273,8 +280,8 @@ public:
 					// Update with the pixel buffer
 					glBindTexture(GL_TEXTURE_2D, myTexture);
 					// TODO : Check RGBA/BGRA for NDI 4.5
-					// glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+					// glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
 					glBindTexture(GL_TEXTURE_2D, 0);
 				}
 
@@ -381,13 +388,26 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Receiver - Vers 1.013\n"
-			"Lynn Jarvis 2018-2021 - https://spout.zeal.co/ \n\n"
-			"Receives textures from NDI Senders\n"
-			"Newtek - https://www.ndi.tv/ \n\n"
-			"Sender name : select sender\n"
-			"Aspect : preserve sender aspect ratio\n"
-			"Low bandwidth : low resolution receiving mode";
+
+		std::string hlp =
+			"Magic NDI Receiver - Vers 1.015\n"
+			"Receives textures from NDI Senders\n\n"
+			"  Sender name : select sender\n"
+			"  Aspect : preserve sender aspect ratio\n"
+			"  Low bandwidth : low resolution receiving mode\n\n"
+			"Lynn Jarvis 2018-2021 - https://spout.zeal.co \n"
+			"For Magic MDK Version 2.3\n"
+			"2012-2020 Color & Music, LLC.\n"
+			"Newtek - https://www.ndi.tv/ \n"
+			"Library version : ";
+
+		// Get NewTek library (dll) version number
+		// Version number is the last 7 chars - e.g 2.1.0.3
+		std::string NDIversion = receiver.GetNDIversion();
+		std::string NDInumber = receiver.GetNDIversion().substr(NDIversion.length() - 7, 7);
+		hlp += NDInumber;
+
+		return hlp.c_str();
 	}
 
 protected:

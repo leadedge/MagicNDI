@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2019 Lynn Jarvis http://spout.zeal.co/
+//		Copyright(C) 2018-2021 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -83,6 +83,11 @@
 // 27.10.20		- Update to Magic MDK Version 2.3
 //				  No code changes. NDI remains at Version 4.5
 //				  Version 1.011
+// 21.08.22		- Update help text with NDI Version number
+//				  Update ofxNDI with NDI Version 5
+//				  Release NDI sender in destructor
+//				  Rebuild x64 VS2017 / MT
+//				  Version 1.012
 //
 // =======================================================================================
 
@@ -164,7 +169,7 @@ public:
 	}
 
 	~MagicNDIsenderModule() {
-
+		ndisender.ReleaseSender();
 	}
 
 	// getSettings() and getParams() are called whenever
@@ -298,15 +303,10 @@ public:
 				bClock = (iValue == 1);
 				ndisender.SetClockVideo(bClock);
 				if (!bClock) {
-					// LJ DEBUG
 					// default to 60 fps
 					ndisender.SetFrameRate(60000, 1000);
-					// Use internal timimg
-					// ofxNDIutils::SetSenderFps(m_frate_N, m_frate_D);
 				}
 				else {
-					// Disable internal timing
-					// ofxNDIutils::SetSenderFps(0);
 					// Restore user fps for NDI
 					ndisender.SetFrameRate(m_frate_N, m_frate_D);
 				}
@@ -343,17 +343,28 @@ public:
 
 
 	const char *getHelpText() {
-		return "Magic NDI Sender - Vers 1.011\n"
-			"Lynn Jarvis 2018-2020 - https://spout.zeal.co/ \n"
+
+
+		std::string hlp =
+			"Magic NDI Sender - Vers 1.012\n"
+			"Sends textures to NDI Receivers\n\n"
+			"  Sender : sender name\n"
+			"  Buffering : use OpenGL pixel buffering\n"
+			"  Clock video : clock video frame rate\n"
+			"  Fps : set frame rate for clocked video\n"
+			"  Async : asynchronous sending mode\n\n"
+			"Lynn Jarvis 2018-2021 - https://spout.zeal.co/ \n"
 			"For Magic MDK Version 2.3\n"
-			"Copyright (c) 2012-2020 Color & Music, LLC.\n\n"
-			"Sends textures to NDI Receivers\n"
-			"Newtek - https://www.ndi.tv/ \n\n"
-			"Sender : sender name\n"
-			"Buffering : use OpenGL pixel buffering\n"
-			"Clock video : clock video frame rate\n"
-			"Fps : set frame rate for clocked video\n"
-			"Async : asynchronous sending mode\n";
+			"2012-2020 Color & Music, LLC.\n"
+			"Newtek - https://www.ndi.tv/ \nLibrary version : ";
+			// Get NewTek library (dll) version number
+			// Version number is the last 7 chars - e.g 2.1.0.3
+			std::string NDIversion = ndisender.GetNDIversion();
+			std::string NDInumber = ndisender.GetNDIversion().substr(NDIversion.length() - 7, 7);
+			hlp += NDInumber;
+
+			return hlp.c_str();
+
 	}
 
 protected:
