@@ -15,7 +15,7 @@ o Update with ofxNDI for NDI 4.0\
 o Version 1.009\
 27.10.20\
 o Update for Magic MDK 2.3 and NDI 4.5\
-o Version 1.012
+o Version 1.012\
 01.02.21\
 o Update Receiver to Version 1.013 for scene change
 
@@ -52,7 +52,7 @@ If you want pre-built modules to use straight way, select the "Release" tab and 
 
 ## Copyrights
 
-MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2020 Lynn Jarvis [https://spout.zeal.co/]
+MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2021 Lynn Jarvis [https://spout.zeal.co/]
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser  General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details. 
