@@ -81,11 +81,14 @@
 // 02.02.21		- Change back to RGBA due to NDI conversion problem
 //				  Update GitHub release
 //				  Version 1.014
-// 21.08.22		- Update help text with NDI version number
+// 21.08.21		- Update help text with NDI version number
 //				  Release NDI receiver in destructor
 //				  Update ofxNDI with NDI Version 5
 //				  Rebuild x64 VS2017 / MT
 //				  Version 1.015
+// 26.09.21		- Update ofxNDI with NDI SDK Version 5.0.3
+//				  Rebuild x64 VS2017 / MT
+//				  Version 1.016
 //
 // =======================================================================================
 
@@ -390,7 +393,7 @@ public:
 	const char *getHelpText() {
 
 		std::string hlp =
-			"Magic NDI Receiver - Vers 1.015\n"
+			"Magic NDI Receiver - Vers 1.016\n"
 			"Receives textures from NDI Senders\n\n"
 			"  Sender name : select sender\n"
 			"  Aspect : preserve sender aspect ratio\n"

@@ -83,11 +83,14 @@
 // 27.10.20		- Update to Magic MDK Version 2.3
 //				  No code changes. NDI remains at Version 4.5
 //				  Version 1.011
-// 21.08.22		- Update help text with NDI Version number
+// 21.08.21		- Update help text with NDI Version number
 //				  Update ofxNDI with NDI Version 5
 //				  Release NDI sender in destructor
 //				  Rebuild x64 VS2017 / MT
 //				  Version 1.012
+// 28.09.21		- Update ofxNDI with NDI SDK Version 5.0.3
+//				  Rebuild x64 VS2017 / MT
+//				  Version 1.013
 //
 // =======================================================================================
 
@@ -346,7 +349,7 @@ public:
 
 
 		std::string hlp =
-			"Magic NDI Sender - Vers 1.012\n"
+			"Magic NDI Sender - Vers 1.013\n"
 			"Sends textures to NDI Receivers\n\n"
 			"  Sender : sender name\n"
 			"  Buffering : use OpenGL pixel buffering\n"
