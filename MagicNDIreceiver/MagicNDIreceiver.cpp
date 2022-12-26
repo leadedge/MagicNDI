@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network https://www.ndi.tv/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2021 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2023 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -89,31 +89,61 @@
 // 26.09.21		- Update ofxNDI with NDI SDK Version 5.0.3
 //				  Rebuild x64 VS2017 / MT
 //				  Version 1.016
+// 15.12.21		- Equalise version numbers for sender and receiver.
+//				  Update to the latest ofxNDI source with NDI SDK Version 5.0.10.1
+//				  Fix NDI version number length.
+//				  For user selection, set the selected sender name or the old one will be used.
+//				  This can happen if there is a name in the dialog at startup and it's not running.
+//				  Version 1.017
+// 11.12.22		- Suppress warnings
+// 12.12.22		- Add ReleaseNDIreceiver
+//				  Expand help and tooltips
+//				  Remove unused definitions and pbos
+//				  Remove unused Glee library
+//				  Allow for sender name change for the same index
+//				  to allow for Spout to NDI selecting another sender
+//				  Rebuild with revised ofxNDI
+// 26.12.22		- Rebuild with revised ofxNDI
+//				  Version 1.018
 //
 // =======================================================================================
 
-// necessary for OpenGL
-#ifdef _WIN32
-#include <windows.h>
-#include "lib/glee/GLee.h" // Include before gl.h
-#include <gl/gl.h>
-#pragma comment(lib, "OpenGL32.Lib")
-#else // (assumes OS X)
-#include <OpenGL/gl.h>
-// TODO : extensions ?
-#endif
+// Suppress warnings because the OpenGLfunctions can't be changed
+#pragma warning(disable : 26482) // Only index into arrays using constant expressions
+#pragma warning(disable : 26485) // Do not pass an array as a single pointer
 
+// The following require a re-write
+// All functions are used without reported problems
+#pragma warning(disable : 26493) // c-style casts.
+#pragma warning(disable : 26472) // static cast no casts for arithmetic conversion (gsl::narrow etc not available)
+#pragma warning(disable : 26481) // Don't use pointer arithmetic (used without exceeding bounds)
+#pragma warning(disable : 26496) // variable assigned only once mark it as const
+#pragma warning(disable : 26446) // Prefer to use gsl::at() - not available
+#pragma warning(disable : 26461) // Pointer argument can be marked as a pointer to const
+#pragma warning(disable : 26408) // Avoid malloc and free. Prefer new and delete.
+
+// Suppress the following for the MDK
+#pragma warning(disable : 26433) // override
+#pragma warning(disable : 26440) // noexcept
+#pragma warning(disable : 26455) // constructor noexcept
+#pragma warning(disable : 26447) // functions inside noexcept
+#pragma warning(disable : 26432) // define or delete
+#pragma warning(disable : 26409) // avoid calling new and delete explicitly
+#pragma warning(disable : 26495) // always initialize a member variable
+
+#include <windows.h>
 #include <conio.h>
 #include <stdio.h>
-#include <thread>
-#include <mutex>
+#include <gl/gl.h>
+#pragma comment(lib, "OpenGL32.Lib")
 
 #include "MagicModule.h"
-#include "ofxNDIreceive.h" // TODO - OSX - should be compatible
+#include "ofxNDIreceive.h"
 
 // Name list for the combo box
-static std::string senderList = ""; // Name list to compare for changes
-static char senderCharList[5120]; // 2560 = 10 or more sender names at 256 each
+static std::string senderList; // Name list to compare for changes
+static int nSenders = 0;
+static char senderCharList[5120]{}; // 2560 = 10 or more sender names at 256 each
 static bool bNeedsUpdating = false; // Update the combo box
 
 // Convenience definitions
@@ -124,13 +154,11 @@ static bool bNeedsUpdating = false; // Update the combo box
 // Number of parameters
 #define NumParams 3
 
-#ifndef GL_READ_FRAMEBUFFER_EXT
-#define GL_READ_FRAMEBUFFER_EXT 0x8CA8
+// For OpenGL
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
 #endif
 
-#ifndef GL_DRAW_FRAMEBUFFER_EXT
-#define GL_DRAW_FRAMEBUFFER_EXT 0x8CA9
-#endif
 
 class MagicNDIreceiverModule : public MagicModule
 {
@@ -142,9 +170,9 @@ public:
 
 	MagicNDIreceiverModule() {
 		
-		/*
 		// For debugging
 		// Console window so printf works
+		/*
 		FILE* pCout; // should really be freed on exit
 		AllocConsole();
 		freopen_s(&pCout, "CONOUT$", "w", stdout);
@@ -163,13 +191,14 @@ public:
 		bNewContext = false; // no OpenGL context yet
 		bAspect = false; // do not preserve aspect ratio of received texture in draw
 		bLowres = false; // do not use low bandwidth receiving mode
+		hlp.reserve(1024); // reserve instead of allocate on the stack
 
 		receiver.SetAudio(false); // Set to receive no audio
 
 	}
 
 	~MagicNDIreceiverModule() {
-		receiver.ReleaseReceiver();
+		// All has been done in glClose
 	}
 
 	// getSettings() and getParams() are called whenever
@@ -193,43 +222,49 @@ public:
 	};
 	
 	virtual void glClose() {
-
-		// Release all objects
-		if (myTexture != 0) glDeleteTextures(1, &myTexture);
-		if (spout_buffer) free((void *)spout_buffer);
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
-		myTexture = 0;
-		spout_buffer = nullptr;
-		m_pbo[0] = 0;
-		m_pbo[1] = 0;
-
+		// Close the NDI receiver
+		// and release receiving buffer and texture
+		ReleaseNDIreceiver();
 	};
 
 	void drawBefore(MagicUserData *userData) {
 
 		unsigned int width = 0;
 		unsigned int height = 0;
-		int nSenders = 0;
+		int nsenders = 0;
 
-		if (receiver.FindSenders(nSenders) || bNewContext) {
+		if(receiver.FindSenders(nsenders)) {
 
 			// FindSenders returns true for a network change
 			// Even if the last sender closed and nSenders = 0
 
+			// FindSenders has only a 1msec timeout, so wait 2 frames 
+			// and check again to allow time for senders to be closed
+			// and the network refreshed.
+			Sleep(33);
+			receiver.FindSenders(nsenders);
+
+			// Construct a new sender list for user selection
+			nSenders = nsenders;
+
 			// Update the sender name list
-			std::string list = "";
+			std::string list;
+
 			if (nSenders > 0) {
 				for (int i = 0; i < nSenders; i++) {
-
+					
 					// Get the full NDI sender name
 					std::string name = receiver.GetSenderName(i);
 
-					// Can optionally use full NDI name for the list
-					// but the prefix is always the same and exceeds
-					// the combo box name width
-					// list += name;
-
-					// Work out the display names for the combo box
+					// If initialized and the the index is current,
+					// release the receiver if it's a different name.
+					if (bInitialized && i == senderIndex && name != senderName) {
+						ReleaseNDIreceiver();
+					}
+					
+					// The full NDI name exceeds the combo box
+					// name width and the prefix is always the same.
+					// Create shortened display names for the combo box
 					std::string newname = name.substr(name.find_first_of("(") + 1, name.find_last_of(")"));
 					newname.resize(newname.length() - 1); // drop the last ')'
 					list += newname;
@@ -241,6 +276,7 @@ public:
 					// if the user does not select anything else
 					// At this stage there is no senderName established
 					if (!bInitialized && !startName.empty() && !bStarted) {
+						// Find the shortened dialog name within the whole name
 						if (name.find(startName.c_str(), 0, startName.size()) != std::string::npos) {
 							// Set the sender name and allow receiver creation with this index
 							senderName = name;
@@ -248,28 +284,32 @@ public:
 							bStarted = true; // don't do this section again
 						}
 					}
-				}
+
+				} // endif nSenders > 0
+
+				// Tell Magic paramNeedsUpdating to update the combo box 
+				// if the list is different or if a new OpenGL context
+				// in case there has been a scene change.
+				if (!list.empty() && list != senderList || bNewContext) {
+					senderList = list; // update comparison string
+					// Update char array for Module param[0].extrainfo
+					// Assume max 256 characters each for 10 senders
+					// Clear first in case the list is smaller
+					memset((void*)senderCharList, 0, 2560);
+					strcpy_s(senderCharList, 2560, list.c_str());
+					bNeedsUpdating = true;
+				} // endif new list
 			} // endif nSenders > 0
-
-			// Tell Magic to update the combo box if the list is different
-			// or if a new OpenGL context in case there has been a scene change.
-			if (list != senderList || bNewContext) {
-				senderList = list; // update comparison string
-				// Update char array for Module param[0].extrainfo
-				// Assume max 256 characters each for 10 senders
-				memset((void *)senderCharList, 0, 2560);
-				if (!list.empty()) strcpy_s(senderCharList, 2560, list.c_str());
-				bNeedsUpdating = true;
-			}
-
 		} // endif network change
 
 		if (nSenders > 0) {
-			// Wait for a sender before doing anything
+			// Wait for a sender before receiving
 			if (bInitialized) {
 				// Receive from the NDI sender
 				// Frame rate might be much less than the draw cycle
-				if (receiver.ReceiveImage(spout_buffer, width, height)) {
+				// ReceiveImage succeeds if it finds a sender
+				// and ignores spout_buffer if null.
+				if (receiver.ReceiveImage(spout_buffer, width, height, false)) {
 					// Have the NDI sender dimensions changed ?
 					// (initially senderWidth and senderHeight are 0 so the buffer gets created here)
 					if (senderWidth != width || senderHeight != height) {
@@ -279,18 +319,16 @@ public:
 						InitTexture(senderWidth, senderHeight);
 						return; // no more for this cycle
 					}
-					// Now the receiving texture is the right size
-					// Update with the pixel buffer
+					// Now that the receiving texture is the right size
+					// update with the pixel buffer
 					glBindTexture(GL_TEXTURE_2D, myTexture);
-					// TODO : Check RGBA/BGRA for NDI 4.5
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
-					// glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
 					glBindTexture(GL_TEXTURE_2D, 0);
 				}
 
-				// Can check for Metadata or Audio here on receive fail
-				// Otherwise if receiveimage fails, the connection could
-				// be down so keep waiting for it to come back
+				// Could check for Metadata or Audio here if receiveimage fails.
+				// Otherwise the connection could be down so draw the current texture 
+				// and keep waiting for it to come back.
 				if (senderWidth > 0 && senderHeight > 0 && myTexture > 0) {
 					DrawReceivedTexture(myTexture, GL_TEXTURE_2D,
 						senderWidth, senderHeight,
@@ -300,13 +338,11 @@ public:
 
 			}
 			else {
-				// Create a new receiver for this index if we have a name for it
-				if (!senderName.empty()) {
-					if (receiver.CreateReceiver(senderIndex)) {
-						// senderName is already set by start or combo box selection
-						bInitialized = true;
-					}
-				}
+				// Update the name in case the one in this position has changed.
+				senderName = receiver.GetSenderName(senderIndex);
+				// Set the sender name or the old one will be used
+				receiver.SetSenderName(senderName.c_str());
+				bInitialized = receiver.CreateReceiver(senderIndex);
 			}
 		}
 
@@ -324,7 +360,6 @@ public:
 			return false;
 
 		int iValue = atoi(newValue);
-		int nSenders = 0;
 		std::string name = "";
 
 		switch (whichParam) {
@@ -346,31 +381,38 @@ public:
 					if (name.find(newValue, 0, strlen(newValue)) != std::string::npos) {
 						// For a different name, reset to the selected index and start again
 						if (name != senderName) {
+							// Release receiver and resources
+							ReleaseNDIreceiver();
+							// Reset the sender index
 							senderIndex = i;
 							// Reset the sender name (full NDI name)
 							senderName = name;
-							receiver.ReleaseReceiver();
-							bInitialized = false;
+							// Set the selected sender name or the old one will be used
+							receiver.SetSenderName(senderName.c_str());
 						}
 					}
 				}
 			}
 			break;
 
-			// Aspect preserve
+		// Aspect preserve
 		case PARAM_Aspect:
 			bAspect = (iValue == 1);
 			break;
 
-			// Low bandwidth
+		// Low bandwidth
 		case PARAM_Lowres:
 			if (iValue != (int)bLowres) {
 				bLowres = (iValue == 1);
+				// Release the receiver and resources
+				ReleaseNDIreceiver();
 				receiver.SetLowBandwidth(bLowres);
-				receiver.ReleaseReceiver();
-				bInitialized = false;
 			}
 			break;
+
+		default:
+			break;
+
 		}
 
 		return true;
@@ -392,22 +434,27 @@ public:
 
 	const char *getHelpText() {
 
-		std::string hlp =
-			"Magic NDI Receiver - Vers 1.016\n"
-			"Receives textures from NDI Senders\n\n"
-			"  Sender name : select sender\n"
-			"  Aspect : preserve sender aspect ratio\n"
-			"  Low bandwidth : low resolution receiving mode\n\n"
-			"Lynn Jarvis 2018-2021 - https://spout.zeal.co \n"
-			"For Magic MDK Version 2.3\n"
-			"2012-2020 Color & Music, LLC.\n"
-			"Newtek - https://www.ndi.tv/ \n"
-			"Library version : ";
+		hlp =
+			"  Magic NDI Receiver - Vers 1.018\n"
+			"  Receives textures from NDI Senders\n\n"
+			"      Sender name : select sender.\n\n"
+			"      Aspect : preserve sender aspect ratio. Instead of \n"
+			"      drawing to the size of the window. It has no effect if\n"
+			"      Window > Magic window options > Graphics resolution\n"
+			"      is set to the same aspect ratio\n\n"
+			"      Low bandwidth : low resolution receiving mode.\n"
+			"      A medium quality stream that takes almost no bandwidth\n"
+			"      normally about 640 pixels on the longest side.\n\n"
+			"  Lynn Jarvis 2018-2023 - https://spout.zeal.co \n"
+			"  For Magic MDK Version 2.3\n"
+			"  2012-2020 Color & Music, LLC.\n"
+			"  Newtek - https://www.ndi.tv/ \n"
+			"  Library version : ";
 
 		// Get NewTek library (dll) version number
-		// Version number is the last 7 chars - e.g 2.1.0.3
+		// Version number is the last 8 chars - e.g 5.0.10.1
 		std::string NDIversion = receiver.GetNDIversion();
-		std::string NDInumber = receiver.GetNDIversion().substr(NDIversion.length() - 7, 7);
+		std::string NDInumber = receiver.GetNDIversion().substr(NDIversion.length() - 8, 8);
 		hlp += NDInumber;
 
 		return hlp.c_str();
@@ -423,10 +470,6 @@ protected:
 	int senderIndex; // index into the list of NDI senders
 	unsigned int senderWidth;
 	unsigned int senderHeight;
-
-	GLuint m_pbo[2];
-	int PboIndex;
-	int NextPboIndex;
 	GLuint myTexture;
 
 	bool bInitialized; // NDI is initialized
@@ -434,29 +477,16 @@ protected:
 	bool bNewContext; // glInit has been called
 	bool bAspect; // preserve aspect ratio of received texture in draw
 	bool bLowres; // low bandwidth receiving mode
+	std::string hlp; // Help text
 
 	// Initialize a local texture
 	void InitTexture(unsigned int width, unsigned int height)
 	{
-		// Set up for pbo pixel data transfer
-		if (m_pbo[0])
-			glDeleteBuffers(2, m_pbo);
-		glGenBuffers(2, m_pbo);
-
-		// Update the receiving buffer
-		if (spout_buffer)
-			free((void *)spout_buffer);
-		spout_buffer = (unsigned char *)malloc(senderWidth*senderHeight * 4 * sizeof(unsigned char));
-
-		// To prevent artefacts when the texture is first drawn, clear with zero chars.
-		// Noticeable with low frame rate sources such as NDI "Test Pattern"
-		// Can use the receiving buffer here for this.
-		memset(spout_buffer, 0, width * height * 4 * sizeof(unsigned char));
-
 		// Release any existing texture
 		if (myTexture != 0)
 			glDeleteTextures(1, &myTexture);
 
+		// Generate a new one
 		glGenTextures(1, &myTexture);
 		glBindTexture(GL_TEXTURE_2D, myTexture);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -466,7 +496,39 @@ protected:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, spout_buffer);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
+		// Update the receiving buffer
+		if (spout_buffer)
+			free((void*)spout_buffer);
+		spout_buffer = (unsigned char*)malloc(width*height * 4 * sizeof(unsigned char));
+
+		// To prevent artefacts when the texture is first drawn, clear with zero chars.
+		// Noticeable with low frame rate sources such as NDI "Test Pattern"
+		// Can use the receiving buffer here for this.
+		if (spout_buffer)
+			memset(spout_buffer, 0, width * height * 4 * sizeof(unsigned char));
+
 	}
+
+	// Release receiver and resources
+	void ReleaseNDIreceiver()
+	{
+		if (!bInitialized)
+			return;
+
+		// Release NDI receiver
+		receiver.ReleaseReceiver();
+		// Free the receiving buffer and texture 
+		// because the receiving resolution might change
+		if (spout_buffer) free((void*)spout_buffer);
+		spout_buffer = nullptr;
+		if (myTexture != 0) glDeleteTextures(1, &myTexture);
+		myTexture = 0;
+		senderWidth = 0;
+		senderHeight = 0;
+		bInitialized = false;
+
+	}
+
 
 	void DrawReceivedTexture(GLuint TextureID, GLuint TextureTarget,
 		unsigned int width, unsigned int height, int viewportWidth, int viewportHeight)
@@ -540,7 +602,10 @@ const bool HasInputPin() {
 const MagicModuleSettings MagicNDIreceiverModule::settings = MagicModuleSettings(NumParams);
 
 const MagicModuleParam MagicNDIreceiverModule::params[NumParams] = {
-	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_COMBOBOX, true, NULL, senderCharList),
-	MagicModuleParam("Aspect", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true),
-	MagicModuleParam("Low bandwidth", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true)
+
+	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_COMBOBOX, true, "The NDI sender name", senderCharList),
+
+	MagicModuleParam("Aspect", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Preserve sender aspect ratio instead of drawing to the size of the window. It has no effect if the Magic window has the same aspect ratio"),
+	MagicModuleParam("Low bandwidth", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, 
+	"Activate low bandwidth receiving mode. This is a medium quality stream that takes almost no bandwidth. Normally about 640 pixels on the longest side")
 };
