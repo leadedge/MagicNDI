@@ -107,6 +107,8 @@
 //				  Expand tooltip help.
 // 13.12.22		  Rebuild with revised ofxNDI
 // 26.12.23		- Rebuild with current SpoutGL
+//				  Rebuild with revised ofxNDI
+//				  Remove compiler warnings due to Microsoft "All rules"
 //				  VS2022 /MT Version 1.018
 //
 // =======================================================================================
@@ -115,26 +117,6 @@
 #pragma warning(disable : 26482) // Only index into arrays using constant expressions
 #pragma warning(disable : 26485) // Do not pass an array as a single pointer
 #pragma warning(disable : 26451) // Arithmetic overflow
-
-
-// The following require a re-write
-// All functions are used without reported problems
-#pragma warning(disable : 26493) // c-style casts.
-#pragma warning(disable : 26472) // static cast no casts for arithmetic conversion (gsl::narrow etc not available)
-#pragma warning(disable : 26481) // Don't use pointer arithmetic (used without exceeding bounds)
-#pragma warning(disable : 26496) // variable assigned only once mark it as const
-#pragma warning(disable : 26446) // Prefer to use gsl::at() - not available
-#pragma warning(disable : 26461) // Pointer argument can be marked as a pointer to const
-#pragma warning(disable : 26408) // Avoid malloc and free. Prefer new and delete.
-
-// Suppress the following for the MDK
-#pragma warning(disable : 26433) // override
-#pragma warning(disable : 26440) // noexcept
-#pragma warning(disable : 26455) // constructor noexcept
-#pragma warning(disable : 26447) // functions inside noexcept
-#pragma warning(disable : 26432) // define or delete
-#pragma warning(disable : 26409) // avoid calling new and delete explicitly
-#pragma warning(disable : 26495) // always initialize a member variable
 
 // Necessary for OpenGL
 // Spout is Windows only
