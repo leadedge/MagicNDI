@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2021 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2023 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -91,35 +91,70 @@
 // 28.09.21		- Update ofxNDI with NDI SDK Version 5.0.3
 //				  Rebuild x64 VS2017 / MT
 //				  Version 1.013
+// 14.11.21		- Change to revised UnloadTexturePixels with bufferstorage
+//				  Increase pbo buffer number to three after performance profile
+//				  Use Spout extensions instead of Glee
+//				  Version 1.014
+// 15.12.21		- Change back to UnloadTexturePixels with glMapBuffer due to testing problems.
+//				  Equalise version numbers for sender and receiver.
+//				  Update to the latest ofxNDI source with NDI SDK Version 5.0.10.1
+//				  Update to latest SpoutGLextensions
+//				  Fix NDI version number length
+//				  Version 1.017
+// 11.12.22		- Suppress warnings (see below)
+//				  Replace bInitialized with SenderCreated()
+//				  Re-order parameters.
+//				  Expand tooltip help.
+// 13.12.22		  Rebuild with revised ofxNDI
+// 26.12.23		- Rebuild with current SpoutGL
+//				  VS2022 /MT Version 1.018
 //
 // =======================================================================================
 
-// necessary for OpenGL
-#ifdef _WIN32
-#include <windows.h>
-#include "lib/glee/GLee.h" // Include before gl.h
-#include <gl/gl.h>
-#pragma comment(lib, "OpenGL32.Lib")
-#else // (assumes OS X)
-#include <OpenGL/gl.h>
-// TODO : extensions ?
-#endif
+// Suppress warnings because the OpenGL functions can't be changed
+#pragma warning(disable : 26482) // Only index into arrays using constant expressions
+#pragma warning(disable : 26485) // Do not pass an array as a single pointer
+#pragma warning(disable : 26451) // Arithmetic overflow
 
+
+// The following require a re-write
+// All functions are used without reported problems
+#pragma warning(disable : 26493) // c-style casts.
+#pragma warning(disable : 26472) // static cast no casts for arithmetic conversion (gsl::narrow etc not available)
+#pragma warning(disable : 26481) // Don't use pointer arithmetic (used without exceeding bounds)
+#pragma warning(disable : 26496) // variable assigned only once mark it as const
+#pragma warning(disable : 26446) // Prefer to use gsl::at() - not available
+#pragma warning(disable : 26461) // Pointer argument can be marked as a pointer to const
+#pragma warning(disable : 26408) // Avoid malloc and free. Prefer new and delete.
+
+// Suppress the following for the MDK
+#pragma warning(disable : 26433) // override
+#pragma warning(disable : 26440) // noexcept
+#pragma warning(disable : 26455) // constructor noexcept
+#pragma warning(disable : 26447) // functions inside noexcept
+#pragma warning(disable : 26432) // define or delete
+#pragma warning(disable : 26409) // avoid calling new and delete explicitly
+#pragma warning(disable : 26495) // always initialize a member variable
+
+// Necessary for OpenGL
+// Spout is Windows only
+#include <windows.h>
 #include <conio.h>
 #include <stdio.h>
-#include <thread>
-#include <mutex>
+#include <gl/gl.h>
+#pragma comment(lib, "OpenGL32.Lib")
 
 #include "MagicModule.h"
-#include "ofxNDIsend.h" // TODO - OSX - should be compatible
+#include "ofxNDIsend.h"
 #include "ofxNDIutils.h" // for SSE CopyImage function
+#include "SpoutGL\SpoutGLextensions.h" // Spout extensions (standalone define)
 
 // Convenience definitions
 #define PARAM_SenderName 0
-#define PARAM_Buffer     1
+#define PARAM_Fps        1
 #define PARAM_Clock      2
-#define PARAM_Fps        3
-#define PARAM_Async      4
+#define PARAM_Async      3
+#define PARAM_Buffer     4
 
 // Number of parameters
 #define NumParams 5
@@ -142,9 +177,8 @@ public:
 
 	MagicNDIsenderModule() {
 		
+		// Console window for debugging
 		/*
-		// For debugging
-		// Console window so printf works
 		FILE* pCout; // should really be freed on exit
 		AllocConsole();
 		freopen_s(&pCout, "CONOUT$", "w", stdout);
@@ -155,24 +189,24 @@ public:
 		UserSenderName[0] = 0; // sender is created when the user enters a name
 		m_Width = 0;
 		m_Height = 0;
-		bInitialized = false;
-		bBuffer = true;
-		bAsync = false;
-		bClock = true;
-		spout_buffer = NULL;
-		m_pbo[0] = 0;
-		m_pbo[1] = 0;
-		PboIndex = 0;
-		NextPboIndex = 0;
+		spout_buffer = nullptr;
 		m_fbo = 0;
 		m_glTexture = 0;
+		bClock = true;
+		bBuffer = true;
+		bAsync = false;
+		m_pbo[0] = 0;
+		m_pbo[1] = 0;
+		m_pbo[2] = 0;
+		PboIndex = 0;
+		NextPboIndex = 0;
 		m_frate_N = 60000; // default 60 fps
 		m_frate_D = 1000;
-
+		hlp.reserve(1024); // reserve plenty instead of allocate on the stack
 	}
 
 	~MagicNDIsenderModule() {
-		ndisender.ReleaseSender();
+		// All has been done in glClose
 	}
 
 	// getSettings() and getParams() are called whenever
@@ -187,13 +221,17 @@ public:
 	
 	virtual void glInit(MagicUserData *userData) {
 
+		// Load Spout extensions instead of using Glee
+		loadGLextensions();
+
 		// pbo for pixel data transfer
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
-		glGenBuffers(2, m_pbo);
+		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		glGenBuffersEXT(3, m_pbo);
 
 		// fbo and texture for invert rather than cpu invert using ofxUtils::CopyImage
-		if (m_fbo) glDeleteFramebuffers(1, &m_fbo);
-		glGenFramebuffers(1, &m_fbo);
+		if (m_fbo) glDeleteFramebuffersEXT(1, &m_fbo);
+		glGenFramebuffersEXT(1, &m_fbo);
+
 		if (m_glTexture) glDeleteTextures(1, &m_glTexture);
 		glGenTextures(1, &m_glTexture);
 
@@ -201,9 +239,10 @@ public:
 	
 	virtual void glClose() {
 
+		// Release sender and resources
 		ReleaseNDIsender();
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
-		if (m_fbo) glDeleteFramebuffers(1, &m_fbo);
+		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		if (m_fbo) glDeleteFramebuffersEXT(1, &m_fbo);
 		if (m_glTexture) glDeleteTextures(1, &m_glTexture);
 
 	};
@@ -222,16 +261,14 @@ public:
 			return; // keep waiting for a name
 
 		// Otherwise create a sender if not initialized yet
-		if (!bInitialized) {
+		if (!ndisender.SenderCreated()) {
 			if (!CreateNDIsender(UserSenderName, userData)) {
 				MessageBeep(0);
 				UserSenderName[0] = 0; // wait for another name to be entered
 				return;
 			}
-			bInitialized = true;
 			return; // give it one frame to initialize
 		}
-
 		// Has the user entered a new sender name ?
 		if (strcmp(SenderName, UserSenderName) != 0) {
 			// Release sender and start again
@@ -241,34 +278,37 @@ public:
 
 		// Has the input size changed ?
 		if (m_Width != (unsigned int)userData->glState->viewportWidth
-			|| m_Height != (unsigned int)userData->glState->viewportHeight) {
+		|| m_Height != (unsigned int)userData->glState->viewportHeight) {
 			// Update sender for new size
 			// m_Width and m_Height are updated
 			UpdateNDIsender((unsigned int)userData->glState->viewportWidth, (unsigned int)userData->glState->viewportHeight);
 			return; // return for the next frame
 		}
 
-		if (bInitialized) {
-			
+		if (ndisender.SenderCreated()) {
 			// Get a texture from the host fbo and flip at the same time
 			// to avoid flipping the pixel buffer using cpu memory
 			if (FlipTexture(m_Width, m_Height, userData->glState->currentFramebuffer)) {
 				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
-				if (bBuffer)
-					UnloadTexturePixels(m_Width, m_Height, spout_buffer, GL_RGBA, userData->glState->currentFramebuffer);
-				else
+				if (bBuffer) {
+					UnloadTexturePixels(m_Width, m_Height,  spout_buffer, GL_RGBA, userData->glState->currentFramebuffer);
+				}
+				else {
 					glReadPixels(0, 0, m_Width, m_Height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
+				}
 				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, userData->glState->currentFramebuffer);
 				// The video frame send is clocked at the sender fps
 				ndisender.SendImage(spout_buffer, m_Width, m_Height, false, false);
 			}
-			
 		}
 	}
 
 	bool fixedParamValueChanged(const int whichParam, const char* newValue) {
 		
-		if (!newValue || !newValue[0])
+		if (!newValue)
+			return false;
+
+		if(newValue[0] == 0)
 			return false;
 
 		int iValue = atoi(newValue);
@@ -280,26 +320,15 @@ public:
 				strcpy_s(UserSenderName, 256, newValue);
 				break;
 
-			// Buffering
-			case PARAM_Buffer:
-				bBuffer = (iValue == 1);
-				break;
-
 			// NDI sender fps
 			case PARAM_Fps:
 				m_frate_N = (int)(atof(newValue) * 1000.0);
 				m_frate_D = 1000;
-				if(bClock) {
+				if (bClock) {
 					ndisender.SetFrameRate(m_frate_N, m_frate_D);
-					if (bInitialized)
+					if (ndisender.SenderCreated())
 						ndisender.UpdateSender(m_Width, m_Height);
 				}
-				break;
-
-			// Async mode
-			case PARAM_Async:
-				bAsync = (iValue == 1);
-				ndisender.SetAsync(bAsync);
 				break;
 
 			case PARAM_Clock:
@@ -313,12 +342,29 @@ public:
 					// Restore user fps for NDI
 					ndisender.SetFrameRate(m_frate_N, m_frate_D);
 				}
-				if (bInitialized) {
+				if (ndisender.SenderCreated()) {
 					ndisender.ReleaseSender(); // no need to reset buffers
 					// Re-create the sender because clock_video is
 					// part of NDI_send_create_desc used to create the sender
-					bInitialized = false;
 				}
+
+				break;
+
+			// Async mode
+			case PARAM_Async:
+				bAsync = (iValue == 1);
+				ndisender.SetAsync(bAsync);
+				if (ndisender.SenderCreated())
+					ndisender.ReleaseSender();
+				break;
+
+			// Buffering
+			case PARAM_Buffer:
+				// Local only
+				bBuffer = (iValue == 1);
+				break;
+
+			default:
 				break;
 
 		}
@@ -338,7 +384,10 @@ public:
 				if (!bClock)
 					return false;
 				break;
-			}
+
+			default:
+				break;
+		}
 		
 		return true; 
 	
@@ -347,61 +396,65 @@ public:
 
 	const char *getHelpText() {
 
+		hlp = "Magic NDI Sender - Vers 1.018\n"
+			  "Sends textures to NDI Receivers\n\n"
+			  "  Sender : sender name\n"
+			  "  Fps : set frame rate for sending\n"
+			  "  Clock video : clock frame rate to fps\n"
+			  "  Async : asynchronous sending\n"
+			  "  Buffering : use OpenGL pixel buffering\n\n"
+			  "Lynn Jarvis 2018-2023 - https://spout.zeal.co/ \n"
+			  "For Magic MDK Version 2.3\n"
+			  "2012-2020 Color & Music, LLC.\n"
+			  "Newtek - https://www.ndi.tv/ \nLibrary version : ";
+			  // Get NewTek library (dll) version number
+			  // Version number is the last 8 chars - e.g 5.1.0.10
+			  std::string NDIversion = ndisender.GetNDIversion();
+			  std::string NDInumber = ndisender.GetNDIversion().substr(NDIversion.length() - 8, 8);
+			  hlp += NDInumber;
 
-		std::string hlp =
-			"Magic NDI Sender - Vers 1.013\n"
-			"Sends textures to NDI Receivers\n\n"
-			"  Sender : sender name\n"
-			"  Buffering : use OpenGL pixel buffering\n"
-			"  Clock video : clock video frame rate\n"
-			"  Fps : set frame rate for clocked video\n"
-			"  Async : asynchronous sending mode\n\n"
-			"Lynn Jarvis 2018-2021 - https://spout.zeal.co/ \n"
-			"For Magic MDK Version 2.3\n"
-			"2012-2020 Color & Music, LLC.\n"
-			"Newtek - https://www.ndi.tv/ \nLibrary version : ";
-			// Get NewTek library (dll) version number
-			// Version number is the last 7 chars - e.g 2.1.0.3
-			std::string NDIversion = ndisender.GetNDIversion();
-			std::string NDInumber = ndisender.GetNDIversion().substr(NDIversion.length() - 7, 7);
-			hlp += NDInumber;
-
-			return hlp.c_str();
+		return hlp.c_str();
 
 	}
 
 protected:
 
-	// Initialize in constructor
+	// Initialize variables in constructor
+
 	ofxNDIsend ndisender;
 	char UserSenderName[256];
 	char SenderName[256];
 	unsigned int m_Width;
 	unsigned int m_Height;
-	bool bInitialized;
+	int m_frate_N; // default 60 fps
+	int m_frate_D;
+	bool bClock;
 	bool bBuffer;
 	bool bAsync;
-	bool bClock;
-	int m_frate_N;
-	int m_frate_D;
 	unsigned char * spout_buffer;
-	GLuint m_pbo[2];
+	GLuint m_pbo[3];
 	int PboIndex;
 	int NextPboIndex;
 	GLuint m_fbo;
 	GLuint m_glTexture;
-
+	std::string hlp;
 	
 	bool FlipTexture(unsigned int width, unsigned int height, GLuint HostFBO)
 	{
-		GLenum status;
+		GLenum status = 0;
 
 		if (HostFBO == 0)
 			return false;
 
 		// Create an fbo if not already
-		if (m_fbo == 0)
+		if (m_fbo == 0) {
 			glGenFramebuffersEXT(1, &m_fbo);
+		}
+
+		// Create pbos if not already
+		if (m_pbo[0] == 0) {
+			glGenBuffersEXT(3, m_pbo);
+		}
 
 		// Resize texture and global size if necessary
 		if (m_glTexture == 0 || width != m_Width || height != m_Height) {
@@ -444,25 +497,16 @@ protected:
 	//
 	// Assumes RGBA image format
 	//
-	bool UnloadTexturePixels(unsigned int width, unsigned int height,
-							 unsigned char* data, GLenum glFormat, GLuint HostFBO)
-	{
-		void *pboMemory = NULL;
 
-		if (m_glTexture == 0 || data == NULL) {
+	bool UnloadTexturePixels(unsigned int width, unsigned int height,
+		unsigned char* data, GLenum glFormat, GLuint HostFBO)
+	{
+
+		if (data == nullptr || m_glTexture == 0 || m_fbo == 0 || m_pbo[0] == 0) {
 			return false;
 		}
 
-		// Create pbos if not already
-		if (m_pbo[0] == 0 || m_pbo[1] == 0) {
-			glGenBuffers(2, m_pbo);
-			GLerror();
-		}
-
-		if (m_fbo == 0) {
-			glGenFramebuffersEXT(1, &m_fbo);
-		}
-
+		void* pboMemory = nullptr;
 		PboIndex = (PboIndex + 1) % 2;
 		NextPboIndex = (PboIndex + 1) % 2;
 
@@ -474,50 +518,49 @@ protected:
 		glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
 
 		// Bind the PBO
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo[PboIndex]);
+		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, m_pbo[PboIndex]);
 
 		// Null existing data to avoid a stall
-		glBufferData(GL_PIXEL_PACK_BUFFER, width*height*4, 0, GL_STREAM_READ);
+		glBufferDataEXT(GL_PIXEL_PACK_BUFFER, width*height * 4, 0, GL_STREAM_READ);
 
 		// Read pixels from framebuffer to PBO - glReadPixels() should return immediately.
-		glReadPixels(0, 0, width, height, glFormat, GL_UNSIGNED_BYTE, (GLvoid *)0);
+		glReadPixels(0, 0, width, height, glFormat, GL_UNSIGNED_BYTE, (GLvoid*)0);
 
 		// If there is data in the next pbo from the previous call, read it back
 
 		// Map the PBO to process its data by CPU
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo[NextPboIndex]);
+		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, m_pbo[NextPboIndex]);
 
 		// glMapBuffer can return NULL when called the first time
 		// when the next pbo has not been filled with data yet
-		pboMemory = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+		pboMemory = glMapBufferEXT(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 
 		if (pboMemory) {
 			// Update data directly from the mapped pbo buffer with SSE optimisations
-			ofxNDIutils::CopyImage((const unsigned char*)pboMemory, (unsigned char*)data, width, height, width*4);
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			ofxNDIutils::CopyImage((const unsigned char*)pboMemory, (unsigned char*)data, width, height, width * 4);
+			glUnmapBufferEXT(GL_PIXEL_PACK_BUFFER);
 		}
 		else {
 			glGetError(); // soak up the last error
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			glBindBufferEXT(GL_PIXEL_PACK_BUFFER, 0);
 			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
 			return false;
 		}
 
 		// Back to conventional pixel operation
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, 0);
 
 		// Restore the previous fbo binding
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
 
 		return true;
-
 	}
 
 
 	void PrintFBOstatus(GLenum status)
 	{
 		char tmp[256];
-		sprintf_s(tmp, 256, "FBO status error 0x%x (%d) - ", status, status);
+		sprintf_s(tmp, 256, "FBO status error 0x%x (%u) - ", status, status);
 		if (status == GL_FRAMEBUFFER_UNSUPPORTED_EXT)
 			strcat_s(tmp, 256, "GL_FRAMEBUFFER_UNSUPPORTED_EXT");
 		else if (status == GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT)
@@ -543,9 +586,9 @@ protected:
 	void GLerror() {
 		GLenum err;
 		while ((err = glGetError()) != GL_NO_ERROR) {
-			printf("OpenGL error = %d (0x%x)\n", err, err);
+			printf("GLerror = %u (0x%x)\n", err, err);
 			// gluErrorString needs glu32.lib
-			// printf("GL error = %d (0x%x) %s\n", err, err, gluErrorString(err));
+			// printf("GL error = %u (0x%x) %s\n", err, err, gluErrorString(err));
 		}
 	}
 
@@ -566,12 +609,11 @@ protected:
 
 	}
 
-
 	bool CreateNDIsender(const char * name, MagicUserData * userdata)
 	{
 	
 		// Close existing sender
-		if (bInitialized)
+		if (ndisender.SenderCreated())
 			ReleaseNDIsender();
 
 		// Update the sender name so that SenderName can be checked for change
@@ -582,7 +624,8 @@ protected:
 		m_Height = (unsigned int)userdata->glState->viewportHeight;
 
 		// Create an RGBA buffer to send to NDI
-		if (spout_buffer) free((void *)spout_buffer);
+		if (spout_buffer)
+			free((void *)spout_buffer);
 		spout_buffer = (unsigned char *)malloc(m_Width*m_Height * 4 * sizeof(unsigned char));
 		if (!spout_buffer)
 			return false;
@@ -591,7 +634,8 @@ protected:
 		InitTexture(m_glTexture, GL_RGBA, m_Width, m_Height);
 
 		// Reset pbos because for a name change, NextPboIndex might still have data in it
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
+		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		m_pbo[0] = m_pbo[1] = m_pbo[2] = 0;
 		PboIndex = NextPboIndex = 0;
 		
 		// Set current modes except frame rate which is set by the user
@@ -605,7 +649,7 @@ protected:
 
 	bool UpdateNDIsender(unsigned int width, unsigned int height)
 	{
-		if (!bInitialized)
+		if (!ndisender.SenderCreated())
 			return false;
 
 		// Update the RGBA buffer to send to NDI
@@ -628,7 +672,8 @@ protected:
 		ndisender.SetClockVideo(bClock);
 
 		// Reset pbos because NextPboIndex might still have data in it
-		if (m_pbo[0]) glDeleteBuffers(2, m_pbo);
+		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		m_pbo[0] = m_pbo[1] = m_pbo[2] = 0;
 		PboIndex = NextPboIndex = 0;
 
 		// Update existing sender
@@ -639,16 +684,14 @@ protected:
 
 	void ReleaseNDIsender()
 	{
-
-		if (!bInitialized) {
+		if (!ndisender.SenderCreated()) {
 			printf("ReleaseNDIsender : sender not initialized\n");
 			return;
 		}
 
-		bInitialized = false;
 		m_Width = m_Height = 0;
 		if (spout_buffer) free((void *)spout_buffer);
-		spout_buffer = NULL;
+		spout_buffer = nullptr;
 		SenderName[0] = 0;
 		ndisender.ReleaseSender();
 
@@ -664,10 +707,12 @@ MagicModule *CreateInstance() {
 
 const MagicModuleSettings MagicNDIsenderModule::settings = MagicModuleSettings(NumParams);
 
-const MagicModuleParam MagicNDIsenderModule::params[NumParams] = {
+const MagicModuleParam MagicNDIsenderModule::params[NumParams] ={
 	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true, "Sender name"),
-	MagicModuleParam("Buffering", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Use OpenGL pixel buffering"),
-	MagicModuleParam("Clock video", "1", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Clock video frame rate"),
-	MagicModuleParam("Fps", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true, "Set frame rate"),
-	MagicModuleParam("Async", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Asynchronous sending mode")
+	MagicModuleParam("Fps", NULL, NULL, NULL, MVT_STRING, MWT_TEXTBOX, true,
+	"Set frame rate"),
+	MagicModuleParam("Clock video", "1", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, 
+	"If fps is set, the output rate is clocked to the fps value"),
+	MagicModuleParam("Async", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Can improve performance because NDI buffers the output frames and does not wait for the last frame to be finished"),
+	MagicModuleParam("Buffering", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "This activates OpenGL pixel buffering of texture to pixel conversion. Three buffers are used and consume CPU memory. This is well within capabilities of modern hardware but you can disable if you have insufficent memory. ")
 };
