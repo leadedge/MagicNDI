@@ -105,6 +105,9 @@
 //				  Rebuild with revised ofxNDI
 // 26.12.22		- Rebuild with revised ofxNDI
 //				  Version 1.018
+// 22.04.23		- Rebuild with current SpoutGL beta and revised ofxNDI
+//			      NDI Vers 5.5.4 - Version to match SpoutToNDI
+//				  VS2022 x64 only /MT Version 1.020
 //
 // =======================================================================================
 
@@ -435,7 +438,7 @@ public:
 	const char *getHelpText() {
 
 		hlp =
-			"  Magic NDI Receiver - Vers 1.018\n"
+			"  Magic NDI Receiver - Vers 1.020\n"
 			"  Receives textures from NDI Senders\n\n"
 			"      Sender name : select sender.\n\n"
 			"      Aspect : preserve sender aspect ratio. Instead of \n"

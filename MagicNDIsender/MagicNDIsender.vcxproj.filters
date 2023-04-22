@@ -2,43 +2,46 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="MagicNDIsender.cpp" />
-    <ClCompile Include="lib\glee\GLee.c">
-      <Filter>lib\glee</Filter>
-    </ClCompile>
-    <ClCompile Include="ofxNDI\src\ofxNDIreceive.cpp">
-      <Filter>ofxNDI</Filter>
-    </ClCompile>
     <ClCompile Include="ofxNDI\src\ofxNDIsend.cpp">
       <Filter>ofxNDI</Filter>
     </ClCompile>
     <ClCompile Include="ofxNDI\src\ofxNDIutils.cpp">
       <Filter>ofxNDI</Filter>
     </ClCompile>
+    <ClCompile Include="ofxNDI\src\ofxNDIdynloader.cpp">
+      <Filter>ofxNDI</Filter>
+    </ClCompile>
+    <ClCompile Include="SpoutGL\SpoutGLextensions.cpp">
+      <Filter>SpoutGL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="lib">
-      <UniqueIdentifier>{0637b5f2-fe5e-4647-bb0b-544ccb918bc7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="lib\glee">
-      <UniqueIdentifier>{923e2ba5-713d-4027-9e4b-4bc8b7313d2d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ofxNDI">
       <UniqueIdentifier>{83f66358-9729-4263-9e4d-bed522a7b292}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Includes">
+      <UniqueIdentifier>{a2f2be27-5198-48b5-9edb-9cd97c086604}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SpoutGL">
+      <UniqueIdentifier>{12b1ad0e-cb9c-4873-a854-1e3f6858366f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lib\glee\GLee.h">
-      <Filter>lib\glee</Filter>
-    </ClInclude>
-    <ClInclude Include="ofxNDI\src\ofxNDIreceive.h">
-      <Filter>ofxNDI</Filter>
-    </ClInclude>
+    <ClInclude Include="MagicModule.h" />
     <ClInclude Include="ofxNDI\src\ofxNDIsend.h">
       <Filter>ofxNDI</Filter>
     </ClInclude>
     <ClInclude Include="ofxNDI\src\ofxNDIutils.h">
       <Filter>ofxNDI</Filter>
     </ClInclude>
-    <ClInclude Include="MagicModule.h" />
+    <ClInclude Include="ofxNDI\src\ofxNDIdynloader.h">
+      <Filter>ofxNDI</Filter>
+    </ClInclude>
+    <ClInclude Include="SpoutGL\SpoutGLextensions.h">
+      <Filter>SpoutGL</Filter>
+    </ClInclude>
+    <ClInclude Include="ofxNDI\src\ofxNDIplatforms.h">
+      <Filter>ofxNDI</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

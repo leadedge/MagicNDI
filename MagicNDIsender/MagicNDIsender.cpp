@@ -110,6 +110,9 @@
 //				  Rebuild with revised ofxNDI
 //				  Remove compiler warnings due to Microsoft "All rules"
 //				  VS2022 /MT Version 1.018
+// 22.04.23		- Rebuild with current SpoutGL beta and revised ofxNDI
+//			      NDI Vers 5.5.4 - Version to match SpoutToNDI
+//				  VS2022 x64 only /MT Version 1.020
 //
 // =======================================================================================
 
@@ -207,8 +210,8 @@ public:
 		loadGLextensions();
 
 		// pbo for pixel data transfer
-		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
-		glGenBuffersEXT(3, m_pbo);
+		if (m_pbo[0]) glDeleteBuffers(3, m_pbo);
+		glGenBuffers(3, m_pbo);
 
 		// fbo and texture for invert rather than cpu invert using ofxUtils::CopyImage
 		if (m_fbo) glDeleteFramebuffersEXT(1, &m_fbo);
@@ -223,7 +226,7 @@ public:
 
 		// Release sender and resources
 		ReleaseNDIsender();
-		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		if (m_pbo[0]) glDeleteBuffers(3, m_pbo);
 		if (m_fbo) glDeleteFramebuffersEXT(1, &m_fbo);
 		if (m_glTexture) glDeleteTextures(1, &m_glTexture);
 
@@ -378,7 +381,7 @@ public:
 
 	const char *getHelpText() {
 
-		hlp = "Magic NDI Sender - Vers 1.018\n"
+		hlp = "Magic NDI Sender - Vers 1.020\n"
 			  "Sends textures to NDI Receivers\n\n"
 			  "  Sender : sender name\n"
 			  "  Fps : set frame rate for sending\n"
@@ -435,7 +438,7 @@ protected:
 
 		// Create pbos if not already
 		if (m_pbo[0] == 0) {
-			glGenBuffersEXT(3, m_pbo);
+			glGenBuffers(3, m_pbo);
 		}
 
 		// Resize texture and global size if necessary
@@ -500,10 +503,10 @@ protected:
 		glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
 
 		// Bind the PBO
-		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, m_pbo[PboIndex]);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo[PboIndex]);
 
 		// Null existing data to avoid a stall
-		glBufferDataEXT(GL_PIXEL_PACK_BUFFER, width*height * 4, 0, GL_STREAM_READ);
+		glBufferData(GL_PIXEL_PACK_BUFFER, width*height * 4, 0, GL_STREAM_READ);
 
 		// Read pixels from framebuffer to PBO - glReadPixels() should return immediately.
 		glReadPixels(0, 0, width, height, glFormat, GL_UNSIGNED_BYTE, (GLvoid*)0);
@@ -511,26 +514,26 @@ protected:
 		// If there is data in the next pbo from the previous call, read it back
 
 		// Map the PBO to process its data by CPU
-		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, m_pbo[NextPboIndex]);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo[NextPboIndex]);
 
 		// glMapBuffer can return NULL when called the first time
 		// when the next pbo has not been filled with data yet
-		pboMemory = glMapBufferEXT(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+		pboMemory = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 
 		if (pboMemory) {
 			// Update data directly from the mapped pbo buffer with SSE optimisations
 			ofxNDIutils::CopyImage((const unsigned char*)pboMemory, (unsigned char*)data, width, height, width * 4);
-			glUnmapBufferEXT(GL_PIXEL_PACK_BUFFER);
+			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		}
 		else {
 			glGetError(); // soak up the last error
-			glBindBufferEXT(GL_PIXEL_PACK_BUFFER, 0);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
 			return false;
 		}
 
 		// Back to conventional pixel operation
-		glBindBufferEXT(GL_PIXEL_PACK_BUFFER, 0);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 		// Restore the previous fbo binding
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
@@ -616,7 +619,7 @@ protected:
 		InitTexture(m_glTexture, GL_RGBA, m_Width, m_Height);
 
 		// Reset pbos because for a name change, NextPboIndex might still have data in it
-		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		if (m_pbo[0]) glDeleteBuffers(3, m_pbo);
 		m_pbo[0] = m_pbo[1] = m_pbo[2] = 0;
 		PboIndex = NextPboIndex = 0;
 		
@@ -654,7 +657,7 @@ protected:
 		ndisender.SetClockVideo(bClock);
 
 		// Reset pbos because NextPboIndex might still have data in it
-		if (m_pbo[0]) glDeleteBuffersEXT(3, m_pbo);
+		if (m_pbo[0]) glDeleteBuffers(3, m_pbo);
 		m_pbo[0] = m_pbo[1] = m_pbo[2] = 0;
 		PboIndex = NextPboIndex = 0;
 
