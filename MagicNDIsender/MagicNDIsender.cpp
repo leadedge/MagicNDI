@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2023 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2024 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -113,6 +113,9 @@
 // 22.04.23		- Rebuild with current SpoutGL beta and revised ofxNDI
 //			      NDI Vers 5.5.4 - Version to match SpoutToNDI
 //				  VS2022 x64 only /MT Version 1.020
+// 02.12.23		- Rebuild with current SpoutGL beta 2.007.013 and revised ofxNDI
+//			      NDI Vers 5.6.0 - Version to match SpoutToNDI
+//				  VS2022 x64 only /MT Version 1.021
 //
 // =======================================================================================
 
@@ -381,14 +384,14 @@ public:
 
 	const char *getHelpText() {
 
-		hlp = "Magic NDI Sender - Vers 1.020\n"
+		hlp = "Magic NDI Sender - Vers 1.021\n"
 			  "Sends textures to NDI Receivers\n\n"
 			  "  Sender : sender name\n"
 			  "  Fps : set frame rate for sending\n"
 			  "  Clock video : clock frame rate to fps\n"
 			  "  Async : asynchronous sending\n"
 			  "  Buffering : use OpenGL pixel buffering\n\n"
-			  "Lynn Jarvis 2018-2023 - https://spout.zeal.co/ \n"
+			  "Lynn Jarvis 2018-2024 - https://spout.zeal.co/ \n"
 			  "For Magic MDK Version 2.3\n"
 			  "2012-2020 Color & Music, LLC.\n"
 			  "Newtek - https://www.ndi.tv/ \nLibrary version : ";

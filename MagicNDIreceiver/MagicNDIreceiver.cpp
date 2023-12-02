@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network https://www.ndi.tv/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2023 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2024 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -108,6 +108,9 @@
 // 22.04.23		- Rebuild with current SpoutGL beta and revised ofxNDI
 //			      NDI Vers 5.5.4 - Version to match SpoutToNDI
 //				  VS2022 x64 only /MT Version 1.020
+// 02.12.23		- Rebuild with current SpoutGL beta 2.007.013 and revised ofxNDI
+//			      NDI Vers 5.6.0 - Version to match SpoutToNDI
+//				  VS2022 x64 only /MT Version 1.021
 //
 // =======================================================================================
 
@@ -438,7 +441,7 @@ public:
 	const char *getHelpText() {
 
 		hlp =
-			"  Magic NDI Receiver - Vers 1.020\n"
+			"  Magic NDI Receiver - Vers 1.021\n"
 			"  Receives textures from NDI Senders\n\n"
 			"      Sender name : select sender.\n\n"
 			"      Aspect : preserve sender aspect ratio. Instead of \n"
@@ -448,7 +451,7 @@ public:
 			"      Low bandwidth : low resolution receiving mode.\n"
 			"      A medium quality stream that takes almost no bandwidth\n"
 			"      normally about 640 pixels on the longest side.\n\n"
-			"  Lynn Jarvis 2018-2023 - https://spout.zeal.co \n"
+			"  Lynn Jarvis 2018-2024 - https://spout.zeal.co \n"
 			"  For Magic MDK Version 2.3\n"
 			"  2012-2020 Color & Music, LLC.\n"
 			"  Newtek - https://www.ndi.tv/ \n"
