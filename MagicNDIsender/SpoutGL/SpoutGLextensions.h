@@ -26,7 +26,7 @@
 //
 /*
 
-	Copyright (c) 2014-2023, Lynn Jarvis. All rights reserved.
+	Copyright (c) 2014-2024, Lynn Jarvis. All rights reserved.
 
 	Redistribution and use in source and binary forms, with or without modification, 
 	are permitted provided that the following conditions are met:
@@ -91,21 +91,15 @@
 // #define legacyOpenGL
 //
 #else
-
 // For use together with Spout source files
-#include "SpoutCommon.h" // for legacyOpenGL define
-#include "SpoutUtils.h"
+#include "SpoutCommon.h" // for legacyOpenGL define and Utils
 #include <stdint.h> // for _uint32 etc
-
-using namespace spoututils;
-
 // ===================== GLEW ======================
 // set this to use GLEW instead of dynamic load of extensions
 // #define USE_GLEW	
 // set this to use glew32s.lib instead of glew32.lib
 // #define GLEW_STATIC
-// ========================== ======================
-
+// =================================================
 #endif
 
 
@@ -122,7 +116,7 @@ using namespace spoututils;
 #define USE_COPY_EXTENSIONS
 
 // Compute shader extensions
-// For future use
+// Remove for Processing library build (JSpoutLib)
 #define USE_COMPUTE_EXTENSIONS
 
 // If load of context creation extension conflicts, disable it here
@@ -250,16 +244,51 @@ enum ExtLogLevel {
 // param[3] - largest auxiliary free block
 //
 #ifndef VBO_FREE_MEMORY_ATI
-#define VBO_FREE_MEMORY_ATI                     0x87FB
+#define VBO_FREE_MEMORY_ATI            0x87FB
 #endif
 
 #ifndef TEXTURE_FREE_MEMORY_ATI
-#define TEXTURE_FREE_MEMORY_ATI                 0x87FC
+#define TEXTURE_FREE_MEMORY_ATI        0x87FC
 #endif
 
 #ifndef RENDERBUFFER_FREE_MEMORY_ATI
-#define RENDERBUFFER_FREE_MEMORY_ATI            0x87FD
+#define RENDERBUFFER_FREE_MEMORY_ATI   0x87FD
 #endif
+
+// glext.h
+#define GL_TEXTURE_TARGET              0x1006
+
+// glext_1.h
+#define GL_TEXTURE_DEPTH               0x8071
+#define GL_TEXTURE_BUFFER_OFFSET       0x919D
+#define GL_TEXTURE_BUFFER_SIZE         0x919E
+
+
+// Define GL_BGRA in case it is used
+#ifndef GL_BGRA
+#define GL_BGRA                        0x80E1
+#endif
+
+// OpenGL floating point formats
+
+// gl3.h
+#ifndef GL_RGBA16F
+#define GL_RGBA16F                     0x881A
+#endif
+
+#ifndef GL_RGB16F
+#define GL_RGB16F                      0x881B
+#endif
+
+// gl4.h
+#ifndef GL_RGBA32F
+#define GL_RGBA32F                     0x8814
+#endif
+
+#ifndef GL_RGB32F
+#define GL_RGB32F                      0x8815
+#endif
+
 
 //------------------------
 // EXTENSION SUPPORT FLAGS
@@ -367,6 +396,10 @@ extern PFNWGLDXUNLOCKOBJECTSNVPROC			wglDXUnlockObjectsNV;
 #define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL_EXT         0x8CD2
 #define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE_EXT 0x8CD3
 #define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT    0x8CD4
+#define GL_COLOR_ATTACHMENT0                                0x8CE0
+#define GL_COLOR_ATTACHMENT1                                0x8CE1
+#define GL_COLOR_ATTACHMENT2                                0x8CE2
+#define GL_COLOR_ATTACHMENT3                                0x8CE3
 #define GL_FRAMEBUFFER_COMPLETE_EXT                         0x8CD5
 #define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT            0x8CD6
 #define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT    0x8CD7
@@ -408,6 +441,13 @@ extern PFNWGLDXUNLOCKOBJECTSNVPROC			wglDXUnlockObjectsNV;
 #define GL_STENCIL_INDEX16_EXT                              0x8D49
 #define GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT			0x8D56
 #define GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT			0x8DA8
+
+// gl3.h Read Format
+#define GL_IMPLEMENTATION_COLOR_READ_TYPE                   0x8B9A
+#define GL_IMPLEMENTATION_COLOR_READ_FORMAT                 0x8B9B
+
+#define GL_FRAMEBUFFER_DEFAULT_WIDTH      0x9310
+#define GL_FRAMEBUFFER_DEFAULT_HEIGHT     0x9311
 
 typedef void   (APIENTRY *glBindFramebufferEXTPROC)			(GLenum target, GLuint framebuffer);
 typedef void   (APIENTRY *glBindRenderbufferEXTPROC)		(GLenum target, GLuint renderbuffer);
@@ -577,6 +617,8 @@ typedef void * (APIENTRY *glMapBufferPROC) (GLenum target,  GLenum access);
 typedef void * (APIENTRY *glMapBufferRangePROC) (GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access);
 typedef GLboolean (APIENTRY *glUnmapBufferPROC) (GLenum target);
 typedef void   (APIENTRY *glGetBufferParameterivPROC) (GLenum target, GLenum value,	GLint * data);
+typedef void   (APIENTRY* glGetTextureParameterivPROC) (GLenum texture, GLenum value, GLint* data);
+
 
 extern glGenBuffersPROC		glGenBuffers;
 extern glDeleteBuffersPROC	glDeleteBuffers;
@@ -587,6 +629,7 @@ extern glMapBufferPROC		glMapBuffer;
 extern glMapBufferRangePROC	glMapBufferRange;
 extern glUnmapBufferPROC	glUnmapBuffer;
 extern glGetBufferParameterivPROC glGetBufferParameteriv;
+extern glGetTextureParameterivPROC glGetTextureParameteriv;
 
 // ------------------------------
 // SYNC objects
@@ -623,8 +666,28 @@ extern glGetInternalFormativPROC glGetInternalFormativ;
 #define GL_COMPUTE_SHADER 0x91B9
 #endif
 
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_COUNT
+#define GL_MAX_COMPUTE_WORK_GROUP_COUNT   0x91BE
+#endif
+
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_SIZE
+#define GL_MAX_COMPUTE_WORK_GROUP_SIZE    0x91BF
+#endif
+
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS
+#define GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS 0x90EB
+#endif
+
 #ifndef GL_LINK_STATUS
 #define GL_LINK_STATUS 0x8B82
+#endif
+
+#ifndef GL_ATTACHED_SHADERS
+#define GL_ATTACHED_SHADERS 0x8B85
+#endif
+
+#ifndef GL_INFO_LOG_LENGTH
+#define GL_INFO_LOG_LENGTH 0x8B84
 #endif
 
 #ifndef GL_TEXTURE0
@@ -655,12 +718,25 @@ typedef void   (APIENTRY* glCompileShaderPROC) (GLuint shader);
 typedef void   (APIENTRY* glAttachShaderPROC) (GLuint program, GLuint shader);
 typedef void   (APIENTRY* glLinkProgramPROC) (GLuint program);
 typedef void   (APIENTRY* glGetProgramivPROC) (GLuint program, GLenum pname, GLint* param);
+typedef void   (APIENTRY* glGetProgramInfoLogPROC) (GLuint program, GLsizei maxLength, GLsizei* length, char* infoLog);
+typedef void   (APIENTRY* glGetShaderInfoLogPROC) (GLuint shader, GLsizei maxLength, GLsizei* length, char* infoLog);
+typedef void   (APIENTRY* glGetIntegeri_vPROC) (GLenum target, GLuint index, GLint* data);
 typedef void   (APIENTRY* glDetachShaderPROC) (GLuint program, GLuint shader);
 typedef void   (APIENTRY* glUseProgramPROC) (GLuint program);
 typedef void   (APIENTRY* glBindImageTexturePROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
 typedef void   (APIENTRY* glDispatchComputePROC) (GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
 typedef void   (APIENTRY* glDeleteProgramPROC) (GLuint program);
 typedef void   (APIENTRY* glDeleteShaderPROC) (GLuint shader);
+
+typedef void   (APIENTRY* glMemoryBarrierPROC) (GLbitfield barriers);
+
+#ifndef GL_SHADER_IMAGE_ACCESS_BARRIER_BIT
+#define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
+#endif
+
+#ifndef GL_ALL_BARRIER_BITS
+#define GL_ALL_BARRIER_BITS 0xFFFFFFFF
+#endif
 
 extern glCreateProgramPROC		glCreateProgram;
 extern glCreateShaderPROC       glCreateShader;
@@ -669,17 +745,23 @@ extern glCompileShaderPROC      glCompileShader;
 extern glAttachShaderPROC       glAttachShader;
 extern glLinkProgramPROC        glLinkProgram;
 extern glGetProgramivPROC       glGetProgramiv;
+extern glGetProgramInfoLogPROC  glGetProgramInfoLog;
+extern glGetShaderInfoLogPROC   glGetShaderInfoLog;
+extern glGetIntegeri_vPROC      glGetIntegeri_v;
 extern glDetachShaderPROC       glDetachShader;
 extern glUseProgramPROC         glUseProgram;
 extern glBindImageTexturePROC   glBindImageTexture;
 extern glDispatchComputePROC    glDispatchCompute;
 extern glDeleteProgramPROC      glDeleteProgram;
 extern glDeleteShaderPROC       glDeleteShader;
+extern glMemoryBarrierPROC      glMemoryBarrier;
 
 typedef void (APIENTRY* glActiveTexturePROC)(GLenum texture);
 extern glActiveTexturePROC      glActiveTexture;
 typedef void (APIENTRY* glUniform1iPROC) (GLint location, GLint v0);
 extern glUniform1iPROC          glUniform1i;
+typedef void (APIENTRY* glUniform1fPROC) (GLint location, float v0);
+extern glUniform1fPROC          glUniform1f;
 typedef GLint (APIENTRY* glGetUniformLocationPROC) (GLuint program, const char* name);
 extern glGetUniformLocationPROC glGetUniformLocation;
 
@@ -690,9 +772,64 @@ extern glTextureStorage2DPROC glTextureStorage2D;
 typedef void (APIENTRY * glCreateTexturesPROC) (GLenum target, GLsizei n, GLuint* textures);
 extern glCreateTexturesPROC glCreateTextures;
 
+// https://registry.khronos.org/OpenGL/extensions/EXT/EXT_external_objects.txt
+// void CreateMemoryObjectsEXT(sizei n,	uint* memoryObjects);
+// void DeleteMemoryObjectsEXT(sizei n, const uint* memoryObjects);
+// void TexStorageMem2DEXT(enum target, sizei levels, enum internalFormat, sizei width,	sizei height, uint memory, uint64 offset);
+// https://registry.khronos.org/OpenGL/extensions/EXT/EXT_external_objects_win32.txt
+// void ImportMemoryWin32HandleEXT(uint memory, uint64 size, enum handleType, void* handle);
+// void ImportMemoryWin32NameEXT(uint memory, uint64 size, enum handleType,	const void* name);
+
+typedef void (APIENTRY* glCreateMemoryObjectsEXTPROC) (GLsizei n, GLuint* memoryObjects);
+extern glCreateMemoryObjectsEXTPROC glCreateMemoryObjectsEXT;
+
+typedef void (APIENTRY* glDeleteMemoryObjectsEXTPROC) (GLsizei n, const GLuint* memoryObjects);
+extern glDeleteMemoryObjectsEXTPROC glDeleteMemoryObjectsEXT;
+
+typedef void (APIENTRY* glTexStorageMem2DEXTPROC) (GLenum target, GLsizei levels, GLenum internalFormat, GLsizei width, GLsizei height, GLuint memory, GLuint64 offset);
+extern glTexStorageMem2DEXTPROC glTexStorageMem2DEXT;
+
+typedef void (APIENTRY* glTextureStorageMem2DEXTPROC) (GLuint texture, GLsizei levels, GLenum internalFormat, GLsizei width, GLsizei height, GLuint memory, GLuint64 offset);
+extern glTextureStorageMem2DEXTPROC glTextureStorageMem2DEXT;
+
+typedef void (APIENTRY* glImportMemoryWin32HandleEXTPROC) (GLuint memory, GLuint64 size, GLenum handleType, void* handle);
+extern glImportMemoryWin32HandleEXTPROC glImportMemoryWin32HandleEXT;
+
+typedef void (APIENTRY* glBufferStorageMemEXTPROC) (GLenum target, GLsizeiptr size, GLuint memory, GLuint64 offset);
+extern glBufferStorageMemEXTPROC glBufferStorageMemEXT;
+
+typedef void (APIENTRY* glMemoryObjectParameterivEXTPROC) (GLuint memoryObject, GLenum pname, const GLint* params);
+extern glMemoryObjectParameterivEXTPROC glMemoryObjectParameterivEXT;
+
+typedef void (APIENTRY* glGetMemoryObjectParameterivEXTPROC) (GLuint memoryObject, GLenum pname, GLint* params);
+extern glGetMemoryObjectParameterivEXTPROC glGetMemoryObjectParameterivEXT;
+
+#ifndef GL_DEDICATED_MEMORY_OBJECT_EXT
+#define GL_DEDICATED_MEMORY_OBJECT_EXT                0x9581
+#endif
+
+#ifndef GL_PROTECTED_MEMORY_OBJECT_EXT                
+#define GL_PROTECTED_MEMORY_OBJECT_EXT                0x959B
+#endif
+
+// Accepted by the <handleType> parameter of ImportMemoryWin32HandleEXT(), ImportMemoryWin32NameEXT()
+#ifndef GL_HANDLE_TYPE_OPAQUE_WIN32_EXT
+#define GL_HANDLE_TYPE_OPAQUE_WIN32_EXT               0x9587
+#endif
+#ifndef GL_HANDLE_TYPE_D3D12_TILEPOOL_EXT
+#define GL_HANDLE_TYPE_D3D12_TILEPOOL_EXT             0x9589
+#endif
+#ifndef GL_HANDLE_TYPE_D3D12_RESOURCE_EXT
+#define GL_HANDLE_TYPE_D3D12_RESOURCE_EXT             0x958A
+#endif
+#ifndef GL_HANDLE_TYPE_D3D11_IMAGE_EXT
+#define GL_HANDLE_TYPE_D3D11_IMAGE_EXT                0x958B
+#endif
+
 
 //---------------------------
 // Context creation extension
+// https://registry.khronos.org/OpenGL/extensions/ARB/WGL_ARB_create_context.txt
 //---------------------------
 typedef HGLRC (APIENTRY * PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC hDC, HGLRC hShareContext, const int *attribList);
 extern PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;

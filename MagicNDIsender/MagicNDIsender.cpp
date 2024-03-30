@@ -115,7 +115,10 @@
 //				  VS2022 x64 only /MT Version 1.020
 // 02.12.23		- Rebuild with current SpoutGL beta 2.007.013 and revised ofxNDI
 //			      NDI Vers 5.6.0 - Version to match SpoutToNDI
-//				  VS2022 x64 only /MT Version 1.021
+// 08.12.23		- ofxNDI, ofxWinMenu, ofxXmlSettings
+//				  remove dependence on shlwapi and using namespace std
+//				  Rebuild with NDI 5.6.0 VS2022 x64/MT Version 1.021
+// 30.03.24		- Rebuild with NDI 5.6.1 VS2022 x64/MT Version 1.022
 //
 // =======================================================================================
 
@@ -384,7 +387,7 @@ public:
 
 	const char *getHelpText() {
 
-		hlp = "Magic NDI Sender - Vers 1.021\n"
+		hlp = "Magic NDI Sender - Vers 1.022\n"
 			  "Sends textures to NDI Receivers\n\n"
 			  "  Sender : sender name\n"
 			  "  Fps : set frame rate for sending\n"

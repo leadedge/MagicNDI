@@ -5,5 +5,6 @@ for either a 32 bit or 64bit application or both.
   NDI/export/vs/Processing.NDI.Lib.x64.dll
 
 Alternatively install the NDI Runtime.
-Download from : http://new.tk/NDIRedistV5
+Download from : http://ndi.link/NDIRedistV5
+
 

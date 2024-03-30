@@ -49,6 +49,7 @@
 	19.11.19 - Add conditional audio receive
 	06.12.19 - Add dynamic load class (https://github.com/IDArnhem/ofxNDI)
 	27.02.20 - Add std::chrono functions for fps timing
+	14.12.23 - Add m_VideoTimecode, GetVideoTimecode()
 
 */
 #pragma once
@@ -69,10 +70,8 @@
 #include <math.h> //
 #include <gl\GL.h>
 #include <mmsystem.h> // for timegettime if ofMain is included
-#include <shlwapi.h>  // for path functions
 #include <Shellapi.h> // for shellexecute
 #pragma comment(lib, "Winmm.lib") // for timegettime
-#pragma comment(lib, "shlwapi.lib")  // for path functions
 #pragma comment(lib, "Shell32.lib")  // for shellexecute
 #elif defined(__APPLE__)
 #if not defined(__aarch64__)
@@ -232,6 +231,12 @@ public:
 	// Return the current MetaData string
 	std::string GetMetadataString();
 
+	// Return the current video frame timestamp
+	int64_t GetVideoTimestamp();
+
+	// Return the current video frame timecode
+	int64_t GetVideoTimecode();
+
 	// Set to receive Audio
 	void SetAudio(bool bAudio);
 
@@ -305,6 +310,10 @@ private:
 	// Metadata
 	bool m_bMetadata;
 	std::string m_metadataString; // XML message format string NULL terminated
+
+	// Video timecode, timestamp
+	int64_t m_VideoTimecode;
+	int64_t m_VideoTimestamp;
 
 	// Audio frame received
 	bool m_bAudio;

@@ -62,6 +62,9 @@
 	30.04.22 - Add missing SetAudio function.
 			   Add GetAudioChannels, GetAudioSamples, GetAudioSampleRate.
 			   Add GetAudioData overload to get audio frame data pointer
+	05.12.23 - Remove shlwapi.h
+
+
 
 */
 #include "ofxNDIreceiver.h"
@@ -462,6 +465,19 @@ bool ofxNDIreceiver::IsMetadata()
 std::string ofxNDIreceiver::GetMetadataString()
 {
 	return NDIreceiver.GetMetadataString();
+}
+
+// Return the current video frame timestamp
+int64_t ofxNDIreceiver::GetVideoTimestamp()
+{
+	return NDIreceiver.GetVideoTimestamp();
+}
+
+// Return the current video frame timecode
+// UTC time since the Unix Epoch (1/1/1970 00:00) with 100 ns precision.
+int64_t ofxNDIreceiver::GetVideoTimecode()
+{
+	return NDIreceiver.GetVideoTimecode();
 }
 
 // Set to receive Audio

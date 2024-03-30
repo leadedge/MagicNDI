@@ -66,8 +66,8 @@
 			 - Correct missing return statement for non-texture image.
 	28.04.22 - Add GetNDIname()
 	10.05.22 - Allow for RGBX in check of format in Sendimage
-	22.06.22 - rgbg2Yuv shaders located in a "bin\data\rgbg2Yuv" folder
-	           instead of "bin\data\shaders\rgbg2Yuv" to avoid conflicts
+	22.06.22 - rgbg2Yuv shaders located in a "bin\data\rgba2Yuv" folder
+	           instead of "bin\data\shaders\rgba2Yuv" to avoid conflicts
 			   with over-write by Project Generator
 	10.12.22 - SetFormat - test existence of required rgba2yuv shader
 			   in "data/rgba2yuv" or "data/shaders/rgba2yuv" for existing code
@@ -75,6 +75,11 @@
 	11.12.22 - ReadYUVpixels - corrected shader load for optional shaders subfolder.
 	28.01.23 - Fix missing comment double quotes for gles version (PR #41)
 	18.11.23 - Remove glReadBuffer from ReadTexturePixels
+	05.12.23 - ReadYUVpixels use absolute shader path instead of relative
+	07.12.23 - SendImage cast to int for dimensions to prevent C4267 warning
+	15.12.23 - ReadYUVpixels use ofFilePath::getCurrentExeDir() instead of GetCurrentModule
+	16.12.23 - Remove "shaders/rgba2yuv/" folder option
+			 - Revise SetFormat to find the shader folder and test existence
 
 */
 #include "ofxNDIsender.h"
@@ -310,7 +315,7 @@ bool ofxNDIsender::SendImage(ofPixels pix, bool bSwapRB, bool bInvert)
 		pix.setImageType(OF_IMAGE_COLOR_ALPHA);
 
 	return SendImage((const unsigned char *)pix.getData(),
-		pix.getWidth(), pix.getHeight(), bSwapRB, bInvert);
+		(int)pix.getWidth(), (int)pix.getHeight(), bSwapRB, bInvert);
 
 }
 
@@ -338,12 +343,11 @@ bool ofxNDIsender::SendImage(const unsigned char * pixels,
 // Set output format
 void ofxNDIsender::SetFormat(NDIlib_FourCC_video_type_e format)
 {
-
 	if (format == NDIlib_FourCC_video_type_UYVY) {
-		// Test existence of required rgba2yuv shader
-		// in "data/rgba2yuv" or "data/shaders/rgba2yuv"
-		if (ofFile::doesFileExist("/rgba2yuv/")
-			|| ofFile::doesFileExist("shaders/rgba2yuv/")) { // instead of _access
+		// For YUV format, test existence of required rgba2yuv shader folder
+		std::string shaderpath = ofFilePath::getCurrentExeDir();
+		shaderpath += "data\\rgba2yuv\\";
+		if (ofDirectory::doesDirectoryExist(shaderpath, false)) {
 			NDIsender.SetFormat(format);
 			// Buffer size will change between YUV and RGBA
 			// Retain sender dimensions, but update the sender
@@ -653,12 +657,6 @@ void ofxNDIsender::AllocatePixelBuffers(unsigned int width, unsigned int height)
 //     data
 //        rgba2yuv
 //
-// For back compatibility they can also be in a "shaders" subfolder
-//   bin
-//     data
-//        shaders
-//           rgba2yuv
-//
 bool ofxNDIsender::ReadYUVpixels(ofFbo &fbo, unsigned int halfwidth, unsigned int height, ofPixels &buffer)
 {
 	return ReadYUVpixels(fbo.getTexture(), halfwidth, height, buffer);
@@ -668,32 +666,23 @@ bool ofxNDIsender::ReadYUVpixels(ofFbo &fbo, unsigned int halfwidth, unsigned in
 // The halfwidth argument is half the sender width
 bool ofxNDIsender::ReadYUVpixels(ofTexture &tex, unsigned int halfwidth, unsigned int height, ofPixels &buffer)
 {
-	if (halfwidth == 0 || height == 0) {
+	if (halfwidth == 0 || height == 0)
 		return false;
-	}
 
 	// Load the shader
 	if (!rgba2yuv.isLoaded()) {
-		bool bResult = false;
+		// Get the rgba2yuv shader folder full path
+		std::string shaderpath = ofFilePath::getCurrentExeDir();
 #ifdef TARGET_OPENGLES
-		bResult = rgba2yuv.load("/rgba2yuv/ES2/rgba2yuv");
-		if(!bResult)
-			bResult = rgba2yuv.load("shaders/rgba2yuv/ES2/rgba2yuv");
+		shaderpath += "data\\rgba2yuv\\ES2\\rgba2yuv";
 #else
-		if (ofIsGLProgrammableRenderer()) {
-			bResult = rgba2yuv.load("/rgba2yuv/GL3/rgba2yuv");
-			if (!bResult)
-				bResult = rgba2yuv.load("shaders/rgba2yuv/GL3/rgba2yuv");
-		}
-		else {
-			bResult = rgba2yuv.load("/rgba2yuv/GL2/rgba2yuv");
-			if (!bResult)
-				bResult = rgba2yuv.load("shaders/rgba2yuv/GL2/rgba2yuv");
-		}
+		if (ofIsGLProgrammableRenderer())
+			shaderpath += "data\\rgba2yuv\\GL3\\rgba2yuv";
+		else
+			shaderpath += "data\\rgba2yuv\\GL2\\rgba2yuv";
 #endif
-		if (!bResult)
+		if (!rgba2yuv.load(shaderpath))
 			return false;
-
 	}
 
 	// Convert the rgba texture to YUV via fbo

@@ -42,10 +42,31 @@
 //			15.02.23	- SpoutGLextensions.h
 //						  Correct glUnmapBufferPROC from void to GLboolean
 //						  Correct glGenBuffersPROC buffers arg from const
+// Version 2.007.11
 //			20.04.23	- Add compute shader extensions
+//			22.04.23	- Correct EXT_LOG prefixe for standalone in ExtLog function
+//			24.04.23	- Add glGetTexParameteriv and glTextureStorage2D
+//			04.05.23	- Define GL_BGRA in case it is used
+//			09.05.23	- Add memory object extensions
+//			16.06.23	- Add glTextureStorageMem2DEXT
+//			24.06.23	- Add glUniform1f
+//			14.07.23	- Add glMemoryBarrier
+//			21.07.23	- Add glGetMemoryObjectParameterivEXT
+//	Version 2.007.012
+//			24.07.23	- Add glMemoryObjectParameterivEXT
+//			30.07.23	- Add GL_RGBA16F, GL_RGB16F, GL_RGBA32F, GL_RGB32F
+//			31.07.23	- Add defines
+//						  GL_IMPLEMENTATION_COLOR_READ_TYPE, GL_IMPLEMENTATION_COLOR_READ_FORMAT
+//			02.08.23	- Add glGetTextureParameteriv
+//			21.11.23	- Add defines for : GL_MAX_COMPUTE_WORK_GROUP_COUNT, GL_MAX_COMPUTE_WORK_GROUP_SIZE
+//						  GL_ATTACHED_SHADERS, GL_INFO_LOG_LENGTH
+//						  Add glGetProgramInfoLog, glGetShaderInfoLog, glGetIntegeri_v
+//	Version 2.007.013
+//			29.03.24	- Correct glUnmapBufferPROC as Glboolean
+//						  Correct glGenBuffersPROC - GLuint* buffers
 //
 
-	Copyright (c) 2014-2023, Lynn Jarvis. All rights reserved.
+	Copyright (c) 2014-2024, Lynn Jarvis. All rights reserved.
 
 	Redistribution and use in source and binary forms, with or without modification, 
 	are permitted provided that the following conditions are met:
@@ -73,6 +94,8 @@
 #ifndef USE_GLEW
 
 // GL/DX extensions
+// https://registry.khronos.org/OpenGL/extensions/NV/WGL_NV_DX_interop.txt
+// https://registry.khronos.org/OpenGL/extensions/NV/WGL_NV_DX_interop2.txt
 PFNWGLDXOPENDEVICENVPROC				wglDXOpenDeviceNV				= NULL;
 PFNWGLDXREGISTEROBJECTNVPROC			wglDXRegisterObjectNV			= NULL;
 PFNWGLDXSETRESOURCESHAREHANDLENVPROC	wglDXSetResourceShareHandleNV	= NULL;
@@ -124,6 +147,8 @@ glMapBufferPROC							glMapBuffer						= NULL;
 glMapBufferRangePROC					glMapBufferRange				= NULL;
 glUnmapBufferPROC						glUnmapBuffer					= NULL;
 glGetBufferParameterivPROC				glGetBufferParameteriv			= NULL;
+// Could be separated
+glGetTextureParameterivPROC             glGetTextureParameteriv         = NULL;
 glClientWaitSyncPROC					glClientWaitSync				= NULL;
 glDeleteSyncPROC						glDeleteSync					= NULL;
 glFenceSyncPROC							glFenceSync						= NULL;
@@ -140,8 +165,8 @@ glGetInternalFormativPROC glGetInternalFormativ = NULL;
 #endif
 
 //---------------------------
-// (for future use)
 // Compute shader extensions
+// Disable for Processing library (JSpoutLib)
 //---------------------------
 glCreateProgramPROC		 glCreateProgram    = NULL;
 glCreateShaderPROC       glCreateShader     = NULL;
@@ -150,19 +175,32 @@ glCompileShaderPROC      glCompileShader    = NULL;
 glAttachShaderPROC       glAttachShader     = NULL;
 glLinkProgramPROC        glLinkProgram      = NULL;
 glGetProgramivPROC       glGetProgramiv     = NULL;
+glGetProgramInfoLogPROC  glGetProgramInfoLog = NULL;
+glGetShaderInfoLogPROC   glGetShaderInfoLog = NULL;
+glGetIntegeri_vPROC      glGetIntegeri_v    = NULL;
 glDetachShaderPROC       glDetachShader     = NULL;
 glUseProgramPROC         glUseProgram       = NULL;
 glBindImageTexturePROC   glBindImageTexture = NULL;
 glDispatchComputePROC    glDispatchCompute  = NULL;
 glDeleteProgramPROC      glDeleteProgram    = NULL;
 glDeleteShaderPROC       glDeleteShader     = NULL;
+glMemoryBarrierPROC      glMemoryBarrier    = NULL;
 glActiveTexturePROC      glActiveTexture    = NULL;
 glUniform1iPROC          glUniform1i        = NULL;
+glUniform1fPROC          glUniform1f        = NULL;
 glGetUniformLocationPROC glGetUniformLocation = NULL;
-
 glTextureStorage2DPROC   glTextureStorage2D  = NULL;
 glCreateTexturesPROC     glCreateTextures    = NULL;
-// glGetTexParameterivPROC  glGetTexParameteriv = NULL;
+
+glCreateMemoryObjectsEXTPROC      glCreateMemoryObjectsEXT = NULL;
+glDeleteMemoryObjectsEXTPROC      glDeleteMemoryObjectsEXT = NULL;
+glTexStorageMem2DEXTPROC          glTexStorageMem2DEXT = NULL;
+glTextureStorageMem2DEXTPROC      glTextureStorageMem2DEXT = NULL;
+glImportMemoryWin32HandleEXTPROC  glImportMemoryWin32HandleEXT = NULL;
+glBufferStorageMemEXTPROC         glBufferStorageMemEXT = NULL;
+glMemoryObjectParameterivEXTPROC  glMemoryObjectParameterivEXT;
+glGetMemoryObjectParameterivEXTPROC glGetMemoryObjectParameterivEXT = NULL;
+
 
 //---------------------------
 // Context creation extension
@@ -353,6 +391,7 @@ bool loadPBOextensions()
 	glMapBufferRange	= (glMapBufferRangePROC)wglGetProcAddress("glMapBufferRange");
 	glUnmapBuffer		= (glUnmapBufferPROC)wglGetProcAddress("glUnmapBuffer");
 	glGetBufferParameteriv = (glGetBufferParameterivPROC)wglGetProcAddress("glGetBufferParameteriv");
+	glGetTextureParameteriv = (glGetTextureParameterivPROC)wglGetProcAddress("glGetTextureParameteriv");
 	glClientWaitSync	= (glClientWaitSyncPROC)wglGetProcAddress("glClientWaitSync");
 	glDeleteSync		= (glDeleteSyncPROC)wglGetProcAddress("glDeleteSync");
 	glFenceSync			= (glFenceSyncPROC)wglGetProcAddress("glFenceSync");
@@ -361,7 +400,7 @@ bool loadPBOextensions()
 		&& glBindBuffer  != NULL && glBufferData     != NULL
 		&& glBufferStorage != NULL && glMapBuffer   != NULL
 		&& glMapBufferRange != NULL && glUnmapBuffer != NULL
-		&& glGetBufferParameteriv != NULL
+		&& glGetBufferParameteriv != NULL && glGetTextureParameteriv != NULL
 		&& glClientWaitSync != NULL && glDeleteSync != NULL && glFenceSync != NULL) {
 		return true;
 	}
@@ -415,10 +454,9 @@ bool loadComputeShaderExtensions()
 
 #ifdef USE_COMPUTE_EXTENSIONS
 
-	// TODO - all shader extensions
-	// #ifdef USE_GLEW
-	// return false;
-	// #else
+	#ifdef USE_GLEW
+	   return false;
+	#else
 
 	// Compute shader extensions
 	glCreateProgram    = (glCreateProgramPROC)wglGetProcAddress("glCreateProgram");
@@ -428,17 +466,33 @@ bool loadComputeShaderExtensions()
 	glAttachShader     = (glAttachShaderPROC)wglGetProcAddress("glAttachShader");
 	glLinkProgram      = (glLinkProgramPROC)wglGetProcAddress("glLinkProgram");
 	glGetProgramiv     = (glGetProgramivPROC)wglGetProcAddress("glGetProgramiv");
+	glGetProgramInfoLog = (glGetProgramInfoLogPROC)wglGetProcAddress("glGetProgramInfoLog");
+	glGetShaderInfoLog = (glGetShaderInfoLogPROC)wglGetProcAddress("glGetShaderInfoLog");
+	glGetIntegeri_v    = (glGetIntegeri_vPROC)wglGetProcAddress("glGetIntegeri_v");
 	glDetachShader     = (glDetachShaderPROC)wglGetProcAddress("glDetachShader");
 	glUseProgram       = (glUseProgramPROC)wglGetProcAddress("glUseProgram");
 	glBindImageTexture = (glBindImageTexturePROC)wglGetProcAddress("glBindImageTexture");
 	glDispatchCompute  = (glDispatchComputePROC)wglGetProcAddress("glDispatchCompute");
 	glDeleteProgram    = (glDeleteProgramPROC)wglGetProcAddress("glDeleteProgram");
 	glDeleteShader     = (glDeleteShaderPROC)wglGetProcAddress("glDeleteShader");
+	glMemoryBarrier    = (glMemoryBarrierPROC)wglGetProcAddress("glMemoryBarrier");
 	glActiveTexture    = (glActiveTexturePROC)wglGetProcAddress("glActiveTexture");
 	glUniform1i        = (glUniform1iPROC)wglGetProcAddress("glUniform1i");
+	glUniform1f        = (glUniform1fPROC)wglGetProcAddress("glUniform1f");
 	glGetUniformLocation = (glGetUniformLocationPROC)wglGetProcAddress("glGetUniformLocation");
 	glTextureStorage2D   = (glTextureStorage2DPROC)wglGetProcAddress("glTextureStorage2D");
 	glCreateTextures     = (glCreateTexturesPROC)wglGetProcAddress("glCreateTextures");
+
+	// These could be separated
+	glCreateMemoryObjectsEXT     = (glCreateMemoryObjectsEXTPROC)wglGetProcAddress("glCreateMemoryObjectsEXT");
+	glDeleteMemoryObjectsEXT     = (glDeleteMemoryObjectsEXTPROC)wglGetProcAddress("glDeleteMemoryObjectsEXT");
+	glTexStorageMem2DEXT         = (glTexStorageMem2DEXTPROC)wglGetProcAddress("glTexStorageMem2DEXT");
+	glTextureStorageMem2DEXT     = (glTextureStorageMem2DEXTPROC)wglGetProcAddress("glTexStorageMem2DEXT");
+	glImportMemoryWin32HandleEXT = (glImportMemoryWin32HandleEXTPROC)wglGetProcAddress("glImportMemoryWin32HandleEXT");
+	glBufferStorageMemEXT        = (glBufferStorageMemEXTPROC)wglGetProcAddress("glBufferStorageMemEXT");
+	glMemoryObjectParameterivEXT = (glMemoryObjectParameterivEXTPROC)wglGetProcAddress("glMemoryObjectParameterivEXT");
+	glGetMemoryObjectParameterivEXT = (glGetMemoryObjectParameterivEXTPROC)wglGetProcAddress("glGetMemoryObjectParameterivEXT");
+
 
 	if(glCreateProgram != NULL
 		&& glCreateShader != NULL
@@ -447,6 +501,9 @@ bool loadComputeShaderExtensions()
 		&& glAttachShader != NULL
 		&& glLinkProgram != NULL
 		&& glGetProgramiv != NULL
+		&& glGetProgramInfoLog != NULL
+		&& glGetShaderInfoLog != NULL
+		&& glGetIntegeri_v != NULL
 		&& glDetachShader != NULL
 		&& glUseProgram != NULL
 		&& glBindImageTexture != NULL
@@ -454,16 +511,29 @@ bool loadComputeShaderExtensions()
 		&& glDeleteProgram != NULL
 		&& glActiveTexture != NULL
 		&& glUniform1i != NULL
+		&& glUniform1f != NULL
 		&& glDeleteShader != NULL
+		&& glMemoryBarrier != NULL
 		&& glGetUniformLocation != NULL
 		&& glTextureStorage2D != NULL
-		&& glCreateTextures != NULL) {
+		&& glCreateTextures != NULL
+		// For testing - could be separated
+		&& glCreateMemoryObjectsEXT != NULL
+		&& glDeleteMemoryObjectsEXT != NULL
+		&& glTexStorageMem2DEXT != NULL
+		&& glTextureStorageMem2DEXT != NULL
+		&& glImportMemoryWin32HandleEXT != NULL
+		&& glBufferStorageMemEXT != NULL
+		&& glMemoryObjectParameterivEXT != NULL
+		&& glGetMemoryObjectParameterivEXT != NULL) {
 			return true;
 	}
 	else {
 		printf("loadComputeShaderExtensions failed\n");
 		return false;
 	}
+#endif
+
 #else
 	// Compute shader extensions defined elsewhere
 	return true;
@@ -706,6 +776,7 @@ bool isExtensionSupported(const char *extension)
 
 }
 
+
 void ExtLog(ExtLogLevel level, const char* format, ...)
 {
 	va_list args;
@@ -733,7 +804,7 @@ void ExtLog(ExtLogLevel level, const char* format, ...)
 	printf("%s\n", currentLog);
 	// Note that this will not be recorded in a Spout log file.
 #else
-	_doLog(static_cast<SpoutLogLevel>(level), format, args); // SpoutUtils function
+	_doLog(static_cast<spoututils::SpoutLogLevel>(level), format, args); // SpoutUtils function
 #endif
 
 	va_end(args);
