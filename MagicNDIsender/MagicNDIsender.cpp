@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network http://NDI.Newtek.com/
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2024 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2025 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -119,6 +119,12 @@
 //				  remove dependence on shlwapi and using namespace std
 //				  Rebuild with NDI 5.6.0 VS2022 x64/MT Version 1.021
 // 30.03.24		- Rebuild with NDI 5.6.1 VS2022 x64/MT Version 1.022
+// 09.05.25     - Rebuild with updated SpoutGLextensions
+//				  and revised ofxNDI - version 2.000.002
+//				  NDI 6.1.1.0 VS2022 x64/MT
+//				  Version 1.023
+// 22.07.25		- ofxNDI - NDI 6.2.0.3 VS2022 x64/MT
+//				  Version 1.024
 //
 // =======================================================================================
 
@@ -138,7 +144,8 @@
 #include "MagicModule.h"
 #include "ofxNDIsend.h"
 #include "ofxNDIutils.h" // for SSE CopyImage function
-#include "SpoutGL\SpoutGLextensions.h" // Spout extensions (standalone define)
+// Spout extensions (with standaloneExtensions define)
+#include "SpoutGL\SpoutGLextensions.h" 
 
 // Convenience definitions
 #define PARAM_SenderName 0
@@ -168,8 +175,8 @@ public:
 
 	MagicNDIsenderModule() {
 		
-		// Console window for debugging
 		/*
+		// Console window for debugging
 		FILE* pCout; // should really be freed on exit
 		AllocConsole();
 		freopen_s(&pCout, "CONOUT$", "w", stdout);
@@ -282,7 +289,7 @@ public:
 			if (FlipTexture(m_Width, m_Height, userData->glState->currentFramebuffer)) {
 				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
 				if (bBuffer) {
-					UnloadTexturePixels(m_Width, m_Height,  spout_buffer, GL_RGBA, userData->glState->currentFramebuffer);
+					UnloadTexturePixels(m_Width, m_Height, spout_buffer, GL_RGBA, userData->glState->currentFramebuffer);
 				}
 				else {
 					glReadPixels(0, 0, m_Width, m_Height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
@@ -387,17 +394,19 @@ public:
 
 	const char *getHelpText() {
 
-		hlp = "Magic NDI Sender - Vers 1.022\n"
-			  "Sends textures to NDI Receivers\n\n"
-			  "  Sender : sender name\n"
-			  "  Fps : set frame rate for sending\n"
-			  "  Clock video : clock frame rate to fps\n"
-			  "  Async : asynchronous sending\n"
-			  "  Buffering : use OpenGL pixel buffering\n\n"
-			  "Lynn Jarvis 2018-2024 - https://spout.zeal.co/ \n"
-			  "For Magic MDK Version 2.3\n"
-			  "2012-2020 Color & Music, LLC.\n"
-			  "Newtek - https://www.ndi.tv/ \nLibrary version : ";
+		hlp = "  Magic NDI Sender - Vers 1.024\n"
+			"  Sends textures to NDI Receivers\n\n"
+			"    Sender : sender name\n"
+			"    Fps : set frame rate for sending\n"
+			"    Clock video : clock frame rate to fps\n"
+			"    Async : asynchronous sending\n"
+			"    Buffering : use OpenGL pixel buffering\n\n"
+			"  Lynn Jarvis 2018-2025\n  https://spout.zeal.co \n"
+			"  ofxNDI Version ";
+		hlp += ofxNDIutils::GetVersion(); hlp += "\n";
+		hlp += "  For Magic MDK Version 2.3\n"
+			  "  2012-2020 Color & Music, LLC.\n"
+			  "  Newtek - https://ndi.video \n  Library version : ";
 			  // Get NewTek library (dll) version number
 			  // Version number is the last 8 chars - e.g 5.1.0.10
 			  std::string NDIversion = ndisender.GetNDIversion();
@@ -621,7 +630,7 @@ protected:
 		if (!spout_buffer)
 			return false;
 
-		// Create or resize the flip texture
+		// Create, re-create or resize the flip texture
 		InitTexture(m_glTexture, GL_RGBA, m_Width, m_Height);
 
 		// Reset pbos because for a name change, NextPboIndex might still have data in it

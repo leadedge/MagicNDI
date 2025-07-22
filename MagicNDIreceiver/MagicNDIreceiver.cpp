@@ -22,9 +22,9 @@
 //		Module plugin for Magic https://magicmusicvisuals.com/
 //		Using the Magic MDK
 //
-//		Using the NDI SDK to send frames over a network https://www.ndi.tv/
+//		Using the NDI SDK to send frames over a network https://ndi.video
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2024 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2025 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -115,6 +115,12 @@
 //				  Rebuild with NDI 5.6.0 VS2022 x64/MT
 //				  Version 1.021 to match Spout to NDI
 // 30.03.24		- Rebuild with NDI 5.6.1 VS2022 x64/MT Version 1.022
+// 09.05.25     - Rebuild with updated SpoutGLextensions
+//				  and revised ofxNDI - version 2.000.002
+//				  NDI 6.1.1.0 VS2022 x64/MT
+//				  Version 1.023
+// 22.07.25		- ofxNDI - NDI 6.2.0.3 VS2022 x64/MT
+//				  Version 1.024
 //
 // =======================================================================================
 
@@ -445,7 +451,7 @@ public:
 	const char *getHelpText() {
 
 		hlp =
-			"  Magic NDI Receiver - Vers 1.022\n"
+			"  Magic NDI Receiver - Vers 1.024\n"
 			"  Receives textures from NDI Senders\n\n"
 			"      Sender name : select sender.\n\n"
 			"      Aspect : preserve sender aspect ratio. Instead of \n"
@@ -455,10 +461,12 @@ public:
 			"      Low bandwidth : low resolution receiving mode.\n"
 			"      A medium quality stream that takes almost no bandwidth\n"
 			"      normally about 640 pixels on the longest side.\n\n"
-			"  Lynn Jarvis 2018-2024 - https://spout.zeal.co \n"
-			"  For Magic MDK Version 2.3\n"
+			"  Lynn Jarvis 2018-2025\n  https://spout.zeal.co \n"
+			"  ofxNDI Version ";
+		hlp += ofxNDIutils::GetVersion(); hlp += "\n";
+		hlp += "  For Magic MDK Version 2.3\n"
 			"  2012-2020 Color & Music, LLC.\n"
-			"  Newtek - https://www.ndi.tv/ \n"
+			"  Newtek - https://ndi.video \n"
 			"  Library version : ";
 
 		// Get NewTek library (dll) version number
