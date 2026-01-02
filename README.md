@@ -4,6 +4,12 @@ MagicNDIsender and MagicNDIreceiver are module plugins for [Magic](https://magic
 
 ## Setup
 
+### Plugins
+
+Pre-built plugins can be downloaded from the [Releases](https://github.com/leadedge/MagicNDI/releases) page and instructions for installation are detailed there.
+
+### Build
+
 1. MagicNDIsender and MagicNDIreceiver project files are for Visual studio 2022 for Windows.
    The individual projects contain all the required files. 
 2. The projects use the Magic Music Visuals Module Development Kit (MDK) 
