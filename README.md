@@ -1,6 +1,6 @@
 ﻿## MagicNDI
 
-MagicNDIsender and MagicNDIreceiver are module plugins for [Magic Music Visuals](https://magicmusicvisuals.com/) to send and receive images over a network using the NewTek Network Device Protocol.
+MagicNDIsender and MagicNDIreceiver are module plugins for [Magic](https://magicmusicvisuals.com/) to send and receive images over a network using the NewTek Network Device Protocol.
 
 ## Setup
 
@@ -26,7 +26,7 @@ MagicNDIsender and MagicNDIreceiver are module plugins for [Magic Music Visuals]
 
 ## Copyrights
 
-MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2025 Lynn Jarvis [http://spout.zeal.co/]
+MagicNDIsender and MagicNDIreceiver - Copyright(C) 2018-2026 Lynn Jarvis [http://spout.zeal.co/]
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser  General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details. 
@@ -52,7 +52,7 @@ You should have received a copy of the GNU Lesser General Public License along w
  
 ----------------------
 
-NDI SDK - Copyright NewTek Inc. [https://ndi.video/](https://ndi.video/).
+NDI SDK : [https://ndi.video/](https://ndi.video/).
 
 A license agreement is included with the Newtek SDK when you receive it after registration with NewTek.
 The SDK is used by you in accordance with the license you accepted by clicking “I accept” during installation. This license is available for review from the root of the SDK folder.

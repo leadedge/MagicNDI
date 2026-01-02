@@ -24,7 +24,7 @@
 //
 //		Using the NDI SDK to send frames over a network https://ndi.video
 //		And send class files from ofxNDI Openframeworks addon https://github.com/leadedge/ofxNDI
-//		Copyright(C) 2018-2025 Lynn Jarvis https://spout.zeal.co/
+//		Copyright(C) 2018-2026 Lynn Jarvis https://spout.zeal.co/
 //
 // =======================================================================================
 //	This program is free software : you can redistribute it and/or modify
@@ -121,6 +121,10 @@
 //				  Version 1.023
 // 22.07.25		- ofxNDI - NDI 6.2.0.3 VS2022 x64/MT
 //				  Version 1.024
+// 28.12.25		- Add YUV/RGBA option for receiver preference
+//				  Add compute shaders for YUV to RGBA conversions
+//				  Confirm that LoadTexturePixels is slower than glTexSubImage2D
+//				  Version 1.025
 //
 // =======================================================================================
 
@@ -155,20 +159,26 @@
 
 #include "MagicModule.h"
 #include "ofxNDIreceive.h"
+// Spout extensions (with standaloneExtensions define)
+#include "SpoutGL\SpoutGLextensions.h"
+#include "SpoutGL\YuvShaders.h" // Compute shaders
 
 // Name list for the combo box
 static std::string senderList; // Name list to compare for changes
 static int nSenders = 0;
 static char senderCharList[5120]{}; // 2560 = 10 or more sender names at 256 each
 static bool bNeedsUpdating = false; // Update the combo box
+static bool bYUV = false; // YUV/RGBA preference
+yuvShaders shaders; // Compute shaders
 
 // Convenience definitions
 #define PARAM_SenderName  0
 #define PARAM_Aspect      1
 #define PARAM_Lowres      2
+#define PARAM_YUV         3
 
 // Number of parameters
-#define NumParams 3
+#define NumParams 4
 
 // For OpenGL
 #ifndef GL_CLAMP_TO_EDGE
@@ -189,10 +199,10 @@ public:
 		// For debugging
 		// Console window so printf works
 		/*
-		FILE* pCout; // should really be freed on exit
+		FILE* pCout;
 		AllocConsole();
 		freopen_s(&pCout, "CONOUT$", "w", stdout);
-		printf("MagicNDIreceiverModule\n");
+		printf("MagicNDIreceiver\n");
 		*/
 
 		spout_buffer = nullptr;
@@ -207,6 +217,7 @@ public:
 		bNewContext = false; // no OpenGL context yet
 		bAspect = false; // do not preserve aspect ratio of received texture in draw
 		bLowres = false; // do not use low bandwidth receiving mode
+		bYUV = false; // Prefer BGRA by default
 		hlp.reserve(1024); // reserve instead of allocate on the stack
 
 		receiver.SetAudio(false); // Set to receive no audio
@@ -229,11 +240,18 @@ public:
 	
 	virtual void glInit(MagicUserData *userData) {
 
+		// Load Spout extensions instead of using Glee
+		loadGLextensions();
+
 		bNewContext = true; // New OpenGL context
 
 		// Make sure there is a valid texture to draw in case of scene change.
-		if (senderWidth > 0 && senderHeight > 0)
-			InitTexture(senderWidth, senderHeight);
+		if (senderWidth > 0 && senderHeight > 0) {
+			if(bYUV)
+				InitTexture(yuvTexture, GL_RGBA, senderWidth/2, senderHeight);
+			InitTexture(myTexture, GL_RGBA, senderWidth, senderHeight);
+
+		}
 
 	};
 	
@@ -248,7 +266,6 @@ public:
 		unsigned int width = 0;
 		unsigned int height = 0;
 		int nsenders = 0;
-
 		if(receiver.FindSenders(nsenders)) {
 
 			// FindSenders returns true for a network change
@@ -319,27 +336,59 @@ public:
 		} // endif network change
 
 		if (nSenders > 0) {
+
 			// Wait for a sender before receiving
 			if (bInitialized) {
+
 				// Receive from the NDI sender
 				// Frame rate might be much less than the draw cycle
 				// ReceiveImage succeeds if it finds a sender
-				// and ignores spout_buffer if null.
-				if (receiver.ReceiveImage(spout_buffer, width, height, false)) {
+				// Receive a pixel buffer and use the video frame data pointer directly
+				if (receiver.ReceiveImage(width, height)) {
+
 					// Have the NDI sender dimensions changed ?
 					// (initially senderWidth and senderHeight are 0 so the buffer gets created here)
 					if (senderWidth != width || senderHeight != height) {
 						senderWidth = width;
 						senderHeight = height;
 						// Update the local texture and receiving buffer
-						InitTexture(senderWidth, senderHeight);
+						if(bYUV)
+							InitTexture(yuvTexture, GL_RGBA, senderWidth/2, senderHeight);
+						InitTexture(myTexture, GL_RGBA, senderWidth, senderHeight);
 						return; // no more for this cycle
 					}
+
 					// Now that the receiving texture is the right size
 					// update with the pixel buffer
-					glBindTexture(GL_TEXTURE_2D, myTexture);
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)spout_buffer);
-					glBindTexture(GL_TEXTURE_2D, 0);
+					if (bYUV && receiver.GetVideoType() == NDIlib_FourCC_type_UYVY) {
+
+						// Get UYVY pixels into yuvTexture
+						glBindTexture(GL_TEXTURE_2D, yuvTexture);
+						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth/2, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)receiver.GetVideoData());
+						glBindTexture(GL_TEXTURE_2D, 0);
+
+						// Convert YUV texture to RGBA texture
+						shaders.YUVtoRgba(yuvTexture, myTexture, senderWidth, senderHeight, true);
+
+					}
+					else {
+						if (receiver.GetVideoType() == NDIlib_FourCC_type_BGRA
+							|| receiver.GetVideoType() == NDIlib_FourCC_type_BGRX) {
+
+							// Get BGRA pixels into myTexture
+							glBindTexture(GL_TEXTURE_2D, myTexture);
+							glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, senderWidth, senderHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)receiver.GetVideoData());
+							glBindTexture(GL_TEXTURE_2D, 0);
+
+							// Swap BGRA > RGBA
+							shaders.Swap(myTexture, senderWidth, senderHeight);
+
+						}
+					}
+
+					// Must free video frame data
+					receiver.FreeVideoData();
+
 				}
 
 				// Could check for Metadata or Audio here if receiveimage fails.
@@ -354,6 +403,7 @@ public:
 
 			}
 			else {
+				// Not initialized
 				// Update the name in case the one in this position has changed.
 				senderName = receiver.GetSenderName(senderIndex);
 				// Set the sender name or the old one will be used
@@ -365,10 +415,6 @@ public:
 		bNewContext = false; // Context has been used
 
 	};
-
-	void drawAfter(MagicUserData *userData) {
-
-	}
 
 	bool fixedParamValueChanged(const int whichParam, const char* newValue) {
 		
@@ -426,6 +472,20 @@ public:
 			}
 			break;
 
+		// YUV / RGBA
+		case PARAM_YUV:
+			if (iValue != (int)bYUV) {
+				bYUV = (iValue == 1);
+				// Release the receiver and resources
+				ReleaseNDIreceiver();
+				// Set receiver preferred format
+				if (bYUV)
+					receiver.SetFormat(NDIlib_recv_color_format_UYVY_RGBA);
+				else
+					receiver.SetFormat(NDIlib_recv_color_format_BGRX_BGRA);
+			}
+			break;
+
 		default:
 			break;
 
@@ -451,24 +511,25 @@ public:
 	const char *getHelpText() {
 
 		hlp =
-			"  Magic NDI Receiver - Vers 1.024\n"
+			"  Magic NDI Receiver - Vers 1.025\n"
+			"  https://github.com/leadedge/MagicNDI\n"
 			"  Receives textures from NDI Senders\n\n"
-			"      Sender name : select sender.\n\n"
-			"      Aspect : preserve sender aspect ratio. Instead of \n"
+			"    Sender name : select sender.\n"
+			"    Aspect : preserve sender aspect ratio. Instead of \n"
 			"      drawing to the size of the window. It has no effect if\n"
 			"      Window > Magic window options > Graphics resolution\n"
-			"      is set to the same aspect ratio\n\n"
-			"      Low bandwidth : low resolution receiving mode.\n"
+			"      is set to the same aspect ratio\n"
+			"    Low bandwidth : low resolution receiving mode.\n"
 			"      A medium quality stream that takes almost no bandwidth\n"
-			"      normally about 640 pixels on the longest side.\n\n"
-			"  Lynn Jarvis 2018-2025\n  https://spout.zeal.co \n"
+			"      normally about 640 pixels on the longest side.\n"
+			"    YUV : Set to prefer YUV or BGRA data (default BGRA)\n\n"
+			"  Lynn Jarvis 2018-2026\n  https://spout.zeal.co \n"
 			"  ofxNDI Version ";
 		hlp += ofxNDIutils::GetVersion(); hlp += "\n";
 		hlp += "  For Magic MDK Version 2.3\n"
 			"  2012-2020 Color & Music, LLC.\n"
-			"  Newtek - https://ndi.video \n"
-			"  Library version : ";
-
+			"  NDI https://ndi.video\n"
+			"  Version : ";
 		// Get NewTek library (dll) version number
 		// Version number is the last 8 chars - e.g 5.0.10.1
 		std::string NDIversion = receiver.GetNDIversion();
@@ -482,13 +543,14 @@ protected:
 
 	// Initialize in constructor
 	ofxNDIreceive receiver; // NDI receiver object
-	unsigned char *spout_buffer; // Buffer used for image transfer
+	unsigned char *spout_buffer = nullptr; // Buffer used for image transfer
 	std::string senderName; // full NDI sender name used by a receiver
 	std::string startName;// used to wait for a selected sender to start
 	int senderIndex; // index into the list of NDI senders
 	unsigned int senderWidth;
 	unsigned int senderHeight;
-	GLuint myTexture;
+	GLuint myTexture; // RGBA data
+	GLuint yuvTexture; // YUV data
 
 	bool bInitialized; // NDI is initialized
 	bool bStarted; // module has started
@@ -497,35 +559,38 @@ protected:
 	bool bLowres; // low bandwidth receiving mode
 	std::string hlp; // Help text
 
-	// Initialize a local texture
-	void InitTexture(unsigned int width, unsigned int height)
+	// Initialize local OpenGL texture
+	void InitTexture(GLuint &texID, GLenum GLformat, unsigned int width, unsigned int height)
 	{
 		// Release any existing texture
-		if (myTexture != 0)
-			glDeleteTextures(1, &myTexture);
+		if (texID != 0) 
+			glDeleteTextures(1, &texID);
 
 		// Generate a new one
-		glGenTextures(1, &myTexture);
-		glBindTexture(GL_TEXTURE_2D, myTexture);
+		glGenTextures(1, &texID);
+
+		glBindTexture(GL_TEXTURE_2D, texID);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, spout_buffer);
+		// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, spout_buffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
-		// Update the receiving buffer
+		// Update the RGBA receiving buffer
 		if (spout_buffer)
 			free((void*)spout_buffer);
-		spout_buffer = (unsigned char*)malloc(width*height * 4 * sizeof(unsigned char));
+		spout_buffer = (unsigned char*)malloc(width*height*4*sizeof(unsigned char));
 
 		// To prevent artefacts when the texture is first drawn, clear with zero chars.
 		// Noticeable with low frame rate sources such as NDI "Test Pattern"
 		// Can use the receiving buffer here for this.
 		if (spout_buffer)
-			memset(spout_buffer, 0, width * height * 4 * sizeof(unsigned char));
+			memset(spout_buffer, 0, width*height*4* sizeof(unsigned char));
 
 	}
+
 
 	// Release receiver and resources
 	void ReleaseNDIreceiver()
@@ -541,6 +606,8 @@ protected:
 		spout_buffer = nullptr;
 		if (myTexture != 0) glDeleteTextures(1, &myTexture);
 		myTexture = 0;
+		if (yuvTexture != 0) glDeleteTextures(1, &yuvTexture);
+		yuvTexture = 0;
 		senderWidth = 0;
 		senderHeight = 0;
 		bInitialized = false;
@@ -622,8 +689,12 @@ const MagicModuleSettings MagicNDIreceiverModule::settings = MagicModuleSettings
 const MagicModuleParam MagicNDIreceiverModule::params[NumParams] = {
 
 	MagicModuleParam("Sender", NULL, NULL, NULL, MVT_STRING, MWT_COMBOBOX, true, "The NDI sender name", senderCharList),
-
 	MagicModuleParam("Aspect", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, "Preserve sender aspect ratio instead of drawing to the size of the window. It has no effect if the Magic window has the same aspect ratio"),
 	MagicModuleParam("Low bandwidth", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, true, 
-	"Activate low bandwidth receiving mode. This is a medium quality stream that takes almost no bandwidth. Normally about 640 pixels on the longest side")
+	"Activate low bandwidth receiving mode. This is a medium quality stream that takes almost no bandwidth. Normally about 640 pixels on the longest side"),
+	MagicModuleParam("YUV", "0", "0", "1", MVT_BOOL, MWT_TOGGLEBUTTON, false, "Receive YUV or RGBA data\n"
+			"RGBA is uncompressed and highest quality with alpha. "
+			"YUV is a compressed format but is more speed efficient. "
+			"The difference is more noticeable at high resolutions.")
+
 };
