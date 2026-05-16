@@ -128,6 +128,9 @@
 // 27.12.25		- ofxNDI - NDI 6.2.1.0 VS2022 x64/MT
 // 28.12.25		- YUV/RGBA option with compute shaders
 //				  Version 1.025
+// 16.05.26		- Set all fbo pixels opaque in FlipTexture
+//				  Rebuild with latest ofxNDI - NDI 6.3.1.0 x64/MT
+//				  Version 1.026
 //
 // =======================================================================================
 
@@ -449,7 +452,7 @@ public:
 
 	const char *getHelpText() {
 
-		hlp = "  Magic NDI Sender - Vers 1.025\n"
+		hlp = "  Magic NDI Sender - Vers 1.026\n"
 			"  https://github.com/leadedge/MagicNDI\n"
 			"  Sends textures to NDI Receivers\n\n"
 			"    Sender : sender name\n"
@@ -541,6 +544,13 @@ protected:
 			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
 			return false;
 		}
+
+		// Set all pixels opaque
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0); // 1.0 for opaque
+		glClear(GL_COLOR_BUFFER_BIT);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 		// restore the host fbo
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, HostFBO);
