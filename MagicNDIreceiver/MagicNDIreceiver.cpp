@@ -125,6 +125,8 @@
 //				  Add compute shaders for YUV to RGBA conversions
 //				  Confirm that LoadTexturePixels is slower than glTexSubImage2D
 //				  Version 1.025
+// 16.05.25		- Rebuild with latest ofxNDI -  NDI 6.3.1.0 x64/MT
+//				  Version 1.026
 //
 // =======================================================================================
 
@@ -511,7 +513,7 @@ public:
 	const char *getHelpText() {
 
 		hlp =
-			"  Magic NDI Receiver - Vers 1.025\n"
+			"  Magic NDI Receiver - Vers 1.026\n"
 			"  https://github.com/leadedge/MagicNDI\n"
 			"  Receives textures from NDI Senders\n\n"
 			"    Sender name : select sender.\n"
